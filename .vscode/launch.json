@@ -6,9 +6,9 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build",
-      "program": "${workspaceFolder}/RouteCheck/bin/Debug/net10.0/RouteCheck.dll",
+      "program": "${workspaceFolder}/src/bin/Debug/net10.0/RouteCheck.dll",
       "args": [],
-      "cwd": "${workspaceFolder}/RouteCheck",
+      "cwd": "${workspaceFolder}/src",
       "console": "internalConsole",
       "stopAtEntry": false
     },

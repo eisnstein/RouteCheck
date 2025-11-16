@@ -1,9 +1,7 @@
 using RouteCheck.Commands.Settings;
+using RouteCheck.Services;
 
 using Spectre.Console.Cli;
-
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace RouteCheck.Commands;
 
@@ -13,8 +11,18 @@ public class CheckCommand : AsyncCommand<CheckSettings>
     {
     }
 
-    public override async Task<int> ExecuteAsync(CommandContext context, CheckSettings settings, CancellationToken _cancellationToken)
+    public override async Task<int> ExecuteAsync(
+        CommandContext _context,
+        CheckSettings _settings,
+        CancellationToken _cancellationToken)
     {
+        var cwd = Directory.GetCurrentDirectory();
+        var (webApp, port) = await WebAppService.StartWebApp(cwd);
+        var openApiDoc = await OpenApiService.GetOpenApiJsonAsync(port);
+
+        OutputService.DisplayRoutesFromSwagger(openApiDoc);
+        WebAppService.StopWebApp(webApp);
+
         return 1;
     }
 }

@@ -6,14 +6,13 @@ namespace RouteCheck.Services;
 
 public static class OutputService
 {
-    public static void DisplayRoutesFromSwagger(OpenApiDocument openApiDoc)
+    public static void DisplayRoutesFromOpenApi(OpenApiDocument openApiDoc)
     {
         var table = new Table();
         table.Border = TableBorder.Ascii2;
         table.AddColumn("Method");
         table.AddColumn("Path");
 
-        AnsiConsole.MarkupLine("Routes for [grey]API[/]:");
         foreach (KeyValuePair<string, IOpenApiPathItem> path in openApiDoc.Paths)
         {
             if (path.Value.Operations is null)

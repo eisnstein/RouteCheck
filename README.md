@@ -2,6 +2,7 @@
 
 # RouteCheck
 
+[![NuGet Package](https://img.shields.io/nuget/vpre/RouteCheck)](https://nuget.org/packages/RouteCheck)
 [![License](https://img.shields.io/github/license/eisnstein/RouteCheck)](https://github.com/eisnstein/RouteCheck/blob/main/LICENSE)
 
 Check your API routes in your Terminal.
@@ -35,6 +36,22 @@ routecheck
 This should give you something like this:
 
 ![RouteCheck check example](https://github.com/eisnstein/RouteCheck/blob/main/src/Assets/routecheck-check.png)
+
+You can also provide a path to the web app via the `path` option:
+
+```sh
+routecheck --path /absolute/path/to/webapp
+
+# or
+
+routecheck -p relativ/path/to/webapp
+```
+
+If you use a custom OpenApi endpoint, you can set the `openApiEndpoint` option:
+
+```sh
+routecheck --openApiEndpoint /some/other/endpoint
+```
 
 For help run:
 

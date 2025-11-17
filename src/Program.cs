@@ -24,7 +24,7 @@ app.Configure(
         config.AddCommand<CheckCommand>("check")
             .WithAlias("c")
             .WithDescription("Check your routes. (default command)")
-            .WithExample(["check", "--csprojFile", ".\\examples\\csproj.xml"]);
+            .WithExample(["check", "--path", "/path/to/webapp"]);
     });
 
 return await app.RunAsync(args)

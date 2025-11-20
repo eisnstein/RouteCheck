@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.3 (2025-11-20)
+
+### Enhancements
+
+- Add self version check
+- Add test setup
+
 ## 0.0.2 (2025-11-17)
 
 ### Enhancements

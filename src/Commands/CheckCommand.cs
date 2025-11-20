@@ -8,8 +8,11 @@ namespace RouteCheck.Commands;
 
 public class CheckCommand : AsyncCommand<CheckSettings>
 {
-    public CheckCommand()
+    private readonly IAnsiConsole _console;
+
+    public CheckCommand(IAnsiConsole console)
     {
+        _console = console;
     }
 
     public override async Task<int> ExecuteAsync(
@@ -35,7 +38,7 @@ public class CheckCommand : AsyncCommand<CheckSettings>
 
         Console.WriteLine();
 
-        OutputService.DisplayRoutesFromOpenApi(openApiDoc);
+        OutputService.DisplayRoutesFromOpenApi(_console, openApiDoc);
         WebAppService.StopWebApp(webApp);
 
         return 1;

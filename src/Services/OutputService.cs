@@ -6,7 +6,7 @@ namespace RouteCheck.Services;
 
 public static class OutputService
 {
-    public static void DisplayRoutesFromOpenApi(OpenApiDocument openApiDoc)
+    public static void DisplayRoutesFromOpenApi(IAnsiConsole console, OpenApiDocument openApiDoc)
     {
         var table = new Table();
         table.Border = TableBorder.Ascii2;
@@ -28,7 +28,7 @@ public static class OutputService
             }
         }
 
-        AnsiConsole.Write(table);
+        console.Write(table);
     }
 
     private static string GetMethodColor(string method)

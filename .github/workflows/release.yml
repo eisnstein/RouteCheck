@@ -29,8 +29,8 @@ jobs:
       - name: Build
         run: dotnet build src/RouteCheck.csproj --configuration Release --no-restore
 
-      # - name: Run tests
-      #   run: dotnet test tests/RouteCheck.tests.csproj --configuration Release --no-build
+      - name: Run tests
+        run: dotnet test tests/RouteCheck.tests.csproj --configuration Release --no-build
 
       - name: Pack NuGet package
         run: dotnet pack src/RouteCheck.csproj --configuration Release --no-build -o ./artifacts /p:PackageVersion=${GITHUB_REF_NAME#v}

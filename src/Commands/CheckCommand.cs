@@ -20,6 +20,8 @@ public class CheckCommand : AsyncCommand<CheckSettings>
         CheckSettings settings,
         CancellationToken _cancellationToken)
     {
+        await RouteCheckService.CheckForNewRouteCheckVersion(new NuGetApiService());
+
         string cwd = Directory.GetCurrentDirectory();
         string pathToProject = Path.Combine(cwd, settings.Path ?? "");
         if (!File.Exists(Path.Combine(pathToProject, "Program.cs")))

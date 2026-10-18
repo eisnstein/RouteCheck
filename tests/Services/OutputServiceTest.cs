@@ -10,20 +10,21 @@ public class OutputServiceTest
     public Task Renders_Table_Correctly()
     {
         TestConsole console = new();
-        OutputService.DisplayRoutes(console, [new Route("GET", "/pets")]);
+        OutputService.DisplayRoutes(console, [new Route("GET", "/pets", "PetsController.List")]);
 
         return Verify(console.Output);
     }
 
     [Test]
-    public Task Renders_SeveralMethods_And_EscapesMarkupInPaths()
+    public Task Renders_SeveralMethods_And_EscapesMarkup()
     {
         TestConsole console = new();
         OutputService.DisplayRoutes(console,
         [
-            new Route("GET", "/pets"),
-            new Route("POST", "/pets"),
-            new Route("DELETE", "/pets/[legacy]"),
+            new Route("ANY", "/", "Page /Index"),
+            new Route("GET", "/pets", "Program (lambda)"),
+            new Route("POST", "/pets", null),
+            new Route("DELETE", "/pets/[legacy]", "[Legacy] handler"),
         ]);
 
         return Verify(console.Output);

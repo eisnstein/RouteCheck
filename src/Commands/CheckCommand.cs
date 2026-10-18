@@ -7,7 +7,8 @@ using Spectre.Console.Cli;
 namespace RouteCheck.Commands;
 
 /// <summary>
-/// Builds and starts the web app, gets its OpenAPI document and lists the routes.
+/// Builds the web app, reads its endpoints by starting it with RouteCheck's startup hook
+/// and lists the routes.
 /// With --output json/markdown, nothing but one document with the result is
 /// printed, at the end of the run or on an error.
 /// </summary>
@@ -43,28 +44,19 @@ public class CheckCommand : AsyncCommand<CheckSettings>
             // With forward slashes, so the documents are the same on every OS
             project = Path.GetRelativePath(Directory.GetCurrentDirectory(), projectFile).Replace('\\', '/');
 
+            if (settings.OpenApiEndpoint is not null)
+            {
+                Status("[dim]INFO:[/] --openapi-endpoint is no longer needed and is ignored, as the routes are read from the app itself.");
+            }
+
             Status($"Building web application [grey]{Markup.Escape(projectFile)}[/]...");
 
             await WebAppService.BuildProject(projectFile, cancellationToken);
 
-            Status("Starting web application and waiting to be ready...");
+            Status("Starting web application to read its routes...");
 
-            List<Route> routes;
-            var (webApp, port) = await WebAppService.StartWebApp(projectFile, TimeSpan.FromSeconds(settings.Timeout), cancellationToken);
-            try
-            {
-                Status($"Web application is running on port [grey]{port}[/]. Retrieving OpenAPI document...");
-
-                using var httpClient = new HttpClient();
-                var url = OpenApiService.BuildUrl(port, settings.OpenApiEndpoint);
-                var openApiDoc = await OpenApiService.GetOpenApiDocumentAsync(httpClient, url, cancellationToken);
-
-                routes = RouteService.Filter(RouteService.GetRoutes(openApiDoc), settings.GetMethods(), settings.Filter ?? []);
-            }
-            finally
-            {
-                WebAppService.StopWebApp(webApp);
-            }
+            var endpoints = await WebAppService.ReadEndpoints(projectFile, TimeSpan.FromSeconds(settings.Timeout), cancellationToken);
+            var routes = RouteService.Filter(RouteService.GetRoutes(endpoints), settings.GetMethods(), settings.Filter ?? []);
 
             if (isStructuredOutput)
             {

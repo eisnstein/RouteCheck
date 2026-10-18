@@ -1,6 +1,6 @@
 ﻿## `src/Api/Api.csproj`
 
-| Method | Path |
-|---|---|
-| GET | `/pets` |
-| DELETE | `/pets/{id}` |
+| Method | Path | Handler |
+|---|---|---|
+| GET | `/pets` | PetsController.List |
+| DELETE | `/pets/{id}` |  |

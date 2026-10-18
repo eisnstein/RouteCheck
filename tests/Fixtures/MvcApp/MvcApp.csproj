@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Started by the end-to-end tests. Not part of the solution, RouteCheck builds it itself.
+       Uses the oldest supported framework and the older Startup class style on purpose. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+</Project>

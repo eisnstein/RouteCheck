@@ -30,7 +30,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.OpenApi" />
     <PackageReference Include="NuGet.Protocol" />
     <PackageReference Include="NuGet.Versioning" />
     <PackageReference Include="Spectre.Console" />
@@ -41,6 +40,18 @@
        Remove this pin once NuGet.Protocol depends on a patched version. -->
   <ItemGroup>
     <PackageReference Include="System.Security.Cryptography.Pkcs" />
+  </ItemGroup>
+
+  <!-- The startup hook is loaded into the web app, not into RouteCheck: it is built first and
+       shipped next to RouteCheck as hook/RouteCheck.StartupHook.dll, but not referenced. -->
+  <ItemGroup>
+    <ProjectReference Include="..\StartupHook\RouteCheck.StartupHook.csproj" ReferenceOutputAssembly="false" />
+    <Compile Include="..\StartupHook\EndpointsContract.cs" Link="StartupHook\EndpointsContract.cs" />
+    <None Include="..\StartupHook\bin\$(Configuration)\net8.0\RouteCheck.StartupHook.dll"
+          Link="hook\RouteCheck.StartupHook.dll"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest"
+          Visible="false" />
   </ItemGroup>
 
   <ItemGroup>

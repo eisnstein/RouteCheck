@@ -4,11 +4,13 @@
   "routes": [
     {
       "method": "GET",
-      "path": "/pets"
+      "path": "/pets",
+      "handler": "PetsController.List"
     },
     {
       "method": "DELETE",
-      "path": "/pets/{id}"
+      "path": "/pets/{id}",
+      "handler": null
     }
   ],
   "error": null

@@ -16,11 +16,15 @@ public static class OutputService
         table.Border = TableBorder.Ascii2;
         table.AddColumn("Method");
         table.AddColumn("Path");
+        table.AddColumn("Handler");
 
         foreach (Route route in routes)
         {
             var methodColor = GetMethodColor(route.Method);
-            table.AddRow($"[{methodColor}]{route.Method}[/]", Markup.Escape(route.Path));
+            table.AddRow(
+                $"[{methodColor}]{route.Method}[/]",
+                Markup.Escape(route.Path),
+                $"[grey]{Markup.Escape(route.Handler ?? "")}[/]");
         }
 
         console.Write(table);

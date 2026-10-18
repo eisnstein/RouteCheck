@@ -45,9 +45,9 @@ public static class StructuredOutputService
             }
             else
             {
-                lines.Add("| Method | Path |");
-                lines.Add("|---|---|");
-                lines.AddRange(routes.Select(r => $"| {r.Method} | `{r.Path.Replace("|", "\\|")}` |"));
+                lines.Add("| Method | Path | Handler |");
+                lines.Add("|---|---|---|");
+                lines.AddRange(routes.Select(r => $"| {r.Method} | `{Escape(r.Path)}` | {Escape(r.Handler ?? "")} |"));
             }
         }
         else
@@ -60,6 +60,8 @@ public static class StructuredOutputService
             writer.WriteLine(line);
         }
     }
+
+    private static string Escape(string cell) => cell.Replace("|", "\\|");
 
     private sealed record CheckDocument(string Command, string? Project, IReadOnlyList<Route> Routes, string? Error);
 }

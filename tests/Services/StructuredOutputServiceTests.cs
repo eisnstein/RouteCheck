@@ -4,7 +4,7 @@ namespace RouteCheck.Tests.Services;
 
 public class StructuredOutputServiceTests
 {
-    private static readonly List<Route> Routes = [new("GET", "/pets"), new("DELETE", "/pets/{id}")];
+    private static readonly List<Route> Routes = [new("GET", "/pets", "PetsController.List"), new("DELETE", "/pets/{id}", null)];
 
     [Test]
     [Arguments(OutputFormat.Json)]

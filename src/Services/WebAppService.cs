@@ -1,31 +1,33 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Net.Sockets;
-using System.Net;
+using System.Text.Json;
+
+using RouteCheck.StartupHook;
 
 namespace RouteCheck.Services;
 
 public static class WebAppService
 {
-    // Number of output lines kept to explain a failed build or startup
+    // Number of output lines kept to explain a failed build or run
     private const int MaxOutputLines = 30;
 
+    private static readonly string StartupHookPath = Path.Combine(AppContext.BaseDirectory, "hook", "RouteCheck.StartupHook.dll");
+
     /// <summary>
-    /// Builds the project before starting it, so the startup timeout does not include the build.
+    /// Builds the project before running it, so the timeout does not include the build.
     /// </summary>
     public static async Task BuildProject(string projectFile, CancellationToken cancellationToken)
     {
         var output = new ConcurrentQueue<string>();
-        using Process process = StartProcess(["build", projectFile, "--nologo", "--verbosity", "quiet"], projectFile, output);
+        using Process process = StartProcess(["build", projectFile, "--nologo", "--verbosity", "quiet"], projectFile, output, new Dictionary<string, string>());
 
         try
         {
             await process.WaitForExitAsync(cancellationToken);
         }
-        catch (OperationCanceledException)
+        finally
         {
-            process.Kill(entireProcessTree: true);
-            throw;
+            Kill(process);
         }
 
         if (process.ExitCode != 0)
@@ -37,32 +39,72 @@ public static class WebAppService
         }
     }
 
-    public static async Task<(Process webApp, int port)> StartWebApp(
+    /// <summary>
+    /// Runs the (built) web app with RouteCheck's startup hook, which writes the app's
+    /// endpoints to a file and stops the app again. The app never listens on a port.
+    /// </summary>
+    public static async Task<IReadOnlyList<EndpointRoute>> ReadEndpoints(
         string projectFile,
-        TimeSpan startupTimeout,
+        TimeSpan timeout,
         CancellationToken cancellationToken)
     {
-        int port = GetAvailablePort();
+        if (!File.Exists(StartupHookPath))
+        {
+            throw new RouteCheckException($"RouteCheck's startup hook is missing at '{StartupHookPath}'. Try reinstalling RouteCheck.");
+        }
+
+        var endpointsFile = Path.Combine(Path.GetTempPath(), $"routecheck-{Guid.NewGuid():N}.json");
+        var environment = new Dictionary<string, string>
+        {
+            ["DOTNET_STARTUP_HOOKS"] = AppendStartupHook(Environment.GetEnvironmentVariable("DOTNET_STARTUP_HOOKS")),
+            [EndpointsContract.EndpointsFileVariable] = endpointsFile,
+        };
+
         var output = new ConcurrentQueue<string>();
-        Process process = StartProcess(
-            ["run", "--project", projectFile, "--no-build", $"--urls=http://localhost:{port}"],
-            projectFile,
-            output);
+        using Process process = StartProcess(["run", "--project", projectFile, "--no-build"], projectFile, output, environment);
 
         try
         {
-            await WaitForWebAppReadyAsync(process, port, startupTimeout, output, cancellationToken);
-        }
-        catch
-        {
-            StopWebApp(process);
-            throw;
-        }
+            using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutSource.CancelAfter(timeout);
 
-        return (process, port);
+            try
+            {
+                await process.WaitForExitAsync(timeoutSource.Token);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new RouteCheckException(
+                    $"Timed out after {timeout.TotalSeconds:0} seconds waiting for the web application to start. Use --timeout to wait longer. RouteCheck supports ASP.NET Core apps on .NET 8 or later. Output:{Environment.NewLine}{string.Join(Environment.NewLine, output)}");
+            }
+
+            // The app may exit with an error code, e.g. when it does more after app.Run().
+            // What counts is that the hook wrote the endpoints.
+            if (!File.Exists(endpointsFile))
+            {
+                throw new RouteCheckException(
+                    $"The web application exited before RouteCheck could read its endpoints. RouteCheck supports ASP.NET Core apps on .NET 8 or later. Output:{Environment.NewLine}{string.Join(Environment.NewLine, output)}");
+            }
+
+            await using var stream = File.OpenRead(endpointsFile);
+            return await JsonSerializer.DeserializeAsync<List<EndpointRoute>>(stream, EndpointsContract.JsonOptions, cancellationToken) ?? [];
+        }
+        finally
+        {
+            Kill(process);
+            File.Delete(endpointsFile);
+        }
     }
 
-    public static void StopWebApp(Process process)
+    // Keeps startup hooks of the app's environment, e.g. of an APM agent
+    private static string AppendStartupHook(string? existingHooks)
+    {
+        return string.IsNullOrEmpty(existingHooks)
+            ? StartupHookPath
+            : $"{existingHooks}{Path.PathSeparator}{StartupHookPath}";
+    }
+
+    private static void Kill(Process process)
     {
         try
         {
@@ -77,22 +119,13 @@ public static class WebAppService
         {
             // The process exited in the meantime
         }
-        finally
-        {
-            process.Dispose();
-        }
     }
 
-    private static int GetAvailablePort()
-    {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
-        return port;
-    }
-
-    private static Process StartProcess(string[] arguments, string projectFile, ConcurrentQueue<string> output)
+    private static Process StartProcess(
+        string[] arguments,
+        string projectFile,
+        ConcurrentQueue<string> output,
+        Dictionary<string, string> environment)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -109,12 +142,18 @@ public static class WebAppService
             startInfo.ArgumentList.Add(argument);
         }
 
-        // The OpenAPI endpoint is usually only mapped in Development. A launch profile
-        // or an environment set by the user still takes precedence.
+        // Endpoints can depend on the environment, and developers usually look at their
+        // app in Development. A launch profile or an environment set by the user still
+        // takes precedence.
         if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") is null
             && Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") is null)
         {
             startInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
+        }
+
+        foreach (var (name, value) in environment)
+        {
+            startInfo.Environment[name] = value;
         }
 
         var process = new Process { StartInfo = startInfo };
@@ -143,61 +182,5 @@ public static class WebAppService
         process.BeginErrorReadLine();
 
         return process;
-    }
-
-    private static async Task WaitForWebAppReadyAsync(
-        Process process,
-        int port,
-        TimeSpan timeout,
-        ConcurrentQueue<string> output,
-        CancellationToken cancellationToken)
-    {
-        var stopwatch = Stopwatch.StartNew();
-
-        while (stopwatch.Elapsed < timeout)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (process.HasExited)
-            {
-                // Wait until the remaining output has been read
-                process.WaitForExit();
-                throw new RouteCheckException(
-                    $"The web application exited before it started accepting requests. Output:{Environment.NewLine}{string.Join(Environment.NewLine, output)}");
-            }
-
-            if (await IsPortOpenAsync(port, cancellationToken))
-            {
-                return;
-            }
-
-            await Task.Delay(250, cancellationToken);
-        }
-
-        throw new RouteCheckException(
-            $"Timed out after {timeout.TotalSeconds:0} seconds waiting for the web application to listen on port {port}. Use --timeout to wait longer. Output:{Environment.NewLine}{string.Join(Environment.NewLine, output)}");
-    }
-
-    private static async Task<bool> IsPortOpenAsync(int port, CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var client = new TcpClient();
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromMilliseconds(500));
-
-            await client.ConnectAsync(IPAddress.Loopback, port, timeout.Token);
-            return true;
-        }
-        catch (SocketException)
-        {
-            // Port is not accepting connections yet
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            // Connecting took too long, try again
-        }
-
-        return false;
     }
 }

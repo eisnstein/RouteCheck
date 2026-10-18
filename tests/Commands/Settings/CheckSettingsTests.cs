@@ -4,7 +4,7 @@ namespace RouteCheck.Tests.Commands.Settings;
 
 public class CheckSettingsTests
 {
-    private static CheckSettings CreateSettings() => new() { OpenApiEndpoint = "/openapi/v1.json", Timeout = 20 };
+    private static CheckSettings CreateSettings() => new() { Timeout = 20 };
 
     [Test]
     public async Task Validate_Succeeds_With_Defaults()

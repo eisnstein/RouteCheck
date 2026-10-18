@@ -6,6 +6,14 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 
 ## Unreleased
 
+### Enhancements
+
+- RouteCheck now reads the routes from the app itself instead of its OpenAPI document. It shows all endpoints: minimal APIs, controllers, Razor Pages and everything else mapped as an endpoint. The `Microsoft.AspNetCore.OpenApi` package is no longer needed.
+- New Handler column (and `handler` in `--output json`/`markdown`), e.g. `OrdersController.Get`, `Page /Orders/Details` or `Program (lambda)`.
+- Routes accepting any HTTP method, like Razor Pages, are shown as `ANY`, and are included for every `--method`.
+- The app no longer listens on a port, and is stopped as soon as its routes are read. A startup hook replaces the web server; startup hooks already set in `DOTNET_STARTUP_HOOKS` are kept.
+- `--openapi-endpoint` is no longer needed and is ignored. It is still accepted, so existing scripts keep working.
+
 ## 0.1.0 (2026-10-18)
 
 ### Enhancements

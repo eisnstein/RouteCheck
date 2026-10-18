@@ -9,9 +9,9 @@ Check your API routes in your Terminal.
 
 ---
 
-RouteCheck is a dotnet tool for checking/viewing your API routes in your terminal. The `check` command (default) shows you all routes in a nice table with some basic information. RouteCheck builds and starts your application in the `Development` environment, calls the `/openapi/v1.json` endpoint and displays the returned document.
+RouteCheck is a dotnet tool for checking/viewing the routes of your ASP.NET Core app in your terminal, like `php artisan route:list` or `mix phx.routes`. The `check` command (default) shows you all routes in a nice table: minimal APIs, controllers, Razor Pages and everything else that is mapped as an endpoint, together with the handler of each route.
 
-> Currently this only works if you are using the `Microsoft.AspNetCore.OpenApi` package and expose the generated JSON via an endpoint (`builder.Services.AddOpenApi()` and `app.MapOpenApi()`).
+RouteCheck works with ASP.NET Core apps on .NET 8 or later. No OpenAPI package or other changes to your app are needed.
 
 ## Installation
 
@@ -35,7 +35,22 @@ routecheck
 
 This should give you something like this:
 
-![RouteCheck check example](https://raw.githubusercontent.com/eisnstein/RouteCheck/main/src/Assets/routecheck-check.png)
+```
++--------+--------------------------+-------------------------+
+| Method | Path                     | Handler                 |
+|--------+--------------------------+-------------------------|
+| ANY    | /                        | Page /Index             |
+| GET    | /api/orders              | OrdersController.List   |
+| GET    | /api/orders/{id:int}     | OrdersController.Get    |
+| PUT    | /api/orders/{id:int}     | OrdersController.Update |
+| GET    | /health                  | Health.Check            |
+| ANY    | /Orders/Details/{id:int} | Page /Orders/Details    |
+| GET    | /pets                    | Program (lambda)        |
++--------+--------------------------+-------------------------+
+```
+
+- `ANY` means the route accepts every HTTP method, like Razor Pages do.
+- For minimal APIs, the handler is the method passed to `MapGet` etc. A lambda is shown as `(lambda)` with the class it is declared in.
 
 You can also provide a path to the web app's directory or project file via the `path` option:
 
@@ -45,12 +60,6 @@ routecheck --path /absolute/path/to/webapp
 # or
 
 routecheck -p relative/path/to/webapp/WebApp.csproj
-```
-
-If you use a custom OpenApi endpoint, you can set the `openapi-endpoint` option:
-
-```sh
-routecheck --openapi-endpoint /some/other/endpoint
 ```
 
 RouteCheck waits 20 seconds for your app to start (after building it). If your app needs longer, e.g. because it runs migrations on startup, set the `timeout` option:
@@ -81,7 +90,7 @@ routecheck --filter pets
 routecheck -f "/pets*"
 ```
 
-Matching is case-insensitive, like ASP.NET Core routing. `method` and `filter` can be combined.
+Matching is case-insensitive, like ASP.NET Core routing. `method` and `filter` can be combined. Routes accepting any method (`ANY`) are shown for every `method`.
 
 ### Output for scripts and LLM agents
 
@@ -98,7 +107,8 @@ routecheck --output json
   "routes": [
     {
       "method": "GET",
-      "path": "/pets"
+      "path": "/pets",
+      "handler": "PetsController.List"
     }
   ],
   "error": null
@@ -106,12 +116,17 @@ routecheck --output json
 ```
 
 - `project` is the project file relative to the current directory.
+- `handler` is `null` if RouteCheck can't tell what handles the route.
 - On an error, `error` contains the message and the exit code is `1`. Otherwise `error` is `null` and the exit code is `0`.
 - `--output markdown` prints the same as a Markdown table, e.g. for pull request comments or job summaries.
 
-### Environment
+### How it works
 
-The app is started with the environment `Development`, unless your launch profile or the `ASPNETCORE_ENVIRONMENT` environment variable sets another one.
+RouteCheck builds your app and starts it with `dotnet run`, adding a [startup hook](https://github.com/dotnet/runtime/blob/main/docs/design/features/host-startup-hook.md) that replaces the web server. Once the app has mapped its endpoints, the hook reads them from ASP.NET Core's routing and stops the app again. So your app never listens on a port, and nothing has to be added to it.
+
+- Your app's startup code runs as usual, e.g. hosted services or database migrations on startup.
+- The app is started with the environment `Development`, unless your launch profile or the `ASPNETCORE_ENVIRONMENT` environment variable sets another one.
+- Startup hooks your app already uses (`DOTNET_STARTUP_HOOKS`) are kept.
 
 For help run:
 

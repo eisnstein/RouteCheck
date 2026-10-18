@@ -3,7 +3,7 @@
 # RouteCheck
 
 [![NuGet Package](https://img.shields.io/nuget/vpre/RouteCheck)](https://nuget.org/packages/RouteCheck)
-[![License](https://img.shields.io/github/license/eisnstein/RouteCheck)](https://github.com/eisnstein/RouteCheck/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-yellow)](https://github.com/eisnstein/PackCheck/blob/main/LICENSE)
 
 Check your API routes in your Terminal.
 
@@ -35,7 +35,7 @@ routecheck
 
 This should give you something like this:
 
-![RouteCheck check example](https://github.com/eisnstein/RouteCheck/blob/main/src/Assets/routecheck-check.png)
+![RouteCheck check example](https://raw.githubusercontent.com/eisnstein/RouteCheck/main/src/Assets/routecheck-check.png)
 
 You can also provide a path to the web app via the `path` option:
 

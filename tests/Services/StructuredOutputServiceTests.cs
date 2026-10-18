@@ -19,7 +19,8 @@ public class StructuredOutputServiceTests
     [Arguments(OutputFormat.Markdown)]
     public Task Writes_Error(string output)
     {
-        return Verify(Write(output, null, [], "No project file (*.csproj) found in '/tmp/app'.")).UseParameters(output);
+        // Not a temp path like /tmp, Verify would replace it with {TempPath} on Linux
+        return Verify(Write(output, null, [], "No project file (*.csproj) found in 'src/Api'.")).UseParameters(output);
     }
 
     [Test]

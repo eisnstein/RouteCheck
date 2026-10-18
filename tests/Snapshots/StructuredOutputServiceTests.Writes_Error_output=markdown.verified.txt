@@ -1,1 +1,1 @@
-﻿**Error:** No project file (*.csproj) found in '/tmp/app'.
+**Error:** No project file (*.csproj) found in 'src/Api'.

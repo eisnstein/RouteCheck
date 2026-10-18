@@ -6,6 +6,8 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 
 ## Unreleased
 
+## 0.1.0 (2026-10-18)
+
 ### Enhancements
 
 - The routes are sorted by path, and routes with the same path by method (GET, POST, PUT, PATCH, DELETE, ...).

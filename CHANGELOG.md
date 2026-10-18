@@ -8,6 +8,11 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 
 ### Enhancements
 
+- The routes are sorted by path, and routes with the same path by method (GET, POST, PUT, PATCH, DELETE, ...).
+- New `-m|--method` option to show only routes with the given HTTP methods, e.g. `-m get,post`.
+- New `-f|--filter` option to show only routes whose path contains the given text, or matches a wildcard pattern (`*` or `%`), e.g. `-f "/pets*"`.
+- New `--output` option (`table`, `json` or `markdown`). With `json` and `markdown`, only the result is printed, as one document, so RouteCheck works well in scripts, CI jobs and with LLM agents. Errors are part of the document.
+- Shows "No routes found." instead of an empty table.
 - The web app is now built before it is started, and build errors are shown. The startup timeout no longer includes the build.
 - New `--timeout` option for the seconds to wait for the web app to start (default 20).
 - `--path` can now also be a project file. RouteCheck looks for a `*.csproj` file instead of `Program.cs`, so projects with their entry point in another file work too. If a directory contains several project files, RouteCheck lists them.

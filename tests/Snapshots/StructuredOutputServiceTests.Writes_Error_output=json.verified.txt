@@ -1,0 +1,6 @@
+﻿{
+  "command": "check",
+  "project": null,
+  "routes": [],
+  "error": "No project file (*.csproj) found in '/tmp/app'."
+}

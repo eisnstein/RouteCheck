@@ -1,0 +1,15 @@
+﻿{
+  "command": "check",
+  "project": "src/Api/Api.csproj",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/pets"
+    },
+    {
+      "method": "DELETE",
+      "path": "/pets/{id}"
+    }
+  ],
+  "error": null
+}

@@ -1,4 +1,4 @@
-﻿using Microsoft.OpenApi;
+﻿using RouteCheck.Services;
 
 using Spectre.Console.Testing;
 
@@ -9,76 +9,32 @@ public class OutputServiceTest
     [Test]
     public Task Renders_Table_Correctly()
     {
-        var openApiDocument = new OpenApiDocument
-        {
-            Info = new OpenApiInfo
-            {
-                Title = "Sample API",
-                Version = "1.0.0"
-            },
-            Paths = new OpenApiPaths
-            {
-                ["/pets"] = new OpenApiPathItem
-                {
-                    Operations = new Dictionary<HttpMethod, OpenApiOperation>
-                    {
-                        [HttpMethod.Get] = new OpenApiOperation
-                        {
-                            Summary = "List all pets",
-                        }
-                    }
-                }
-            }
-        };
-
-        // Capture the console output
         TestConsole console = new();
-        RouteCheck.Services.OutputService.DisplayRoutesFromOpenApi(console, openApiDocument);
-        var output = console.Output.ToString();
+        OutputService.DisplayRoutes(console, [new Route("GET", "/pets")]);
 
-        // Verify the output contains the expected table structure
-        return Verify(output);
+        return Verify(console.Output);
     }
 
     [Test]
     public Task Renders_SeveralMethods_And_EscapesMarkupInPaths()
     {
-        var openApiDocument = new OpenApiDocument
-        {
-            Paths = new OpenApiPaths
-            {
-                ["/pets"] = new OpenApiPathItem
-                {
-                    Operations = new Dictionary<HttpMethod, OpenApiOperation>
-                    {
-                        [HttpMethod.Get] = new OpenApiOperation(),
-                        [HttpMethod.Post] = new OpenApiOperation(),
-                    }
-                },
-                ["/pets/[legacy]"] = new OpenApiPathItem
-                {
-                    Operations = new Dictionary<HttpMethod, OpenApiOperation>
-                    {
-                        [HttpMethod.Delete] = new OpenApiOperation(),
-                    }
-                }
-            }
-        };
-
         TestConsole console = new();
-        RouteCheck.Services.OutputService.DisplayRoutesFromOpenApi(console, openApiDocument);
+        OutputService.DisplayRoutes(console,
+        [
+            new Route("GET", "/pets"),
+            new Route("POST", "/pets"),
+            new Route("DELETE", "/pets/[legacy]"),
+        ]);
 
-        return Verify(console.Output.ToString());
+        return Verify(console.Output);
     }
 
     [Test]
-    public Task Renders_EmptyTable_When_ThereAreNoPaths()
+    public async Task Renders_Message_When_ThereAreNoRoutes()
     {
-        var openApiDocument = new OpenApiDocument { Paths = new OpenApiPaths() };
-
         TestConsole console = new();
-        RouteCheck.Services.OutputService.DisplayRoutesFromOpenApi(console, openApiDocument);
+        OutputService.DisplayRoutes(console, []);
 
-        return Verify(console.Output.ToString());
+        await Assert.That(console.Output.Trim()).IsEqualTo("No routes found.");
     }
 }

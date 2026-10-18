@@ -1,31 +1,26 @@
-using Microsoft.OpenApi;
-
 using Spectre.Console;
 
 namespace RouteCheck.Services;
 
 public static class OutputService
 {
-    public static void DisplayRoutesFromOpenApi(IAnsiConsole console, OpenApiDocument openApiDoc)
+    public static void DisplayRoutes(IAnsiConsole console, IReadOnlyList<Route> routes)
     {
+        if (routes.Count == 0)
+        {
+            console.MarkupLine("[yellow]No routes found.[/]");
+            return;
+        }
+
         var table = new Table();
         table.Border = TableBorder.Ascii2;
         table.AddColumn("Method");
         table.AddColumn("Path");
 
-        foreach (KeyValuePair<string, IOpenApiPathItem> path in openApiDoc.Paths)
+        foreach (Route route in routes)
         {
-            if (path.Value.Operations is null)
-            {
-                continue;
-            }
-
-            foreach (KeyValuePair<HttpMethod, OpenApiOperation> operation in path.Value.Operations)
-            {
-                var method = operation.Key.ToString();
-                var methodColor = GetMethodColor(method);
-                table.AddRow($"[{methodColor}]{method}[/]", Markup.Escape(path.Key));
-            }
+            var methodColor = GetMethodColor(route.Method);
+            table.AddRow($"[{methodColor}]{route.Method}[/]", Markup.Escape(route.Path));
         }
 
         console.Write(table);

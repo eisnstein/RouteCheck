@@ -1,5 +1,7 @@
 using System.ComponentModel;
 
+using RouteCheck.Services;
+
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -22,10 +24,49 @@ public sealed class CheckSettings : CommandSettings
     [DefaultValue(20)]
     public int Timeout { get; set; }
 
+    [CommandOption("-m|--method <Method>")]
+    [Description(@"Show only routes with the given HTTP method, e.g. GET (can be used multiple times or comma-separated).")]
+    public string[]? Method { get; set; }
+
+    [CommandOption("-f|--filter <Pattern>")]
+    [Description(@"Show only routes whose path contains the given text, or matches the given wildcard pattern (* or %) (can be used multiple times).")]
+    public string[]? Filter { get; set; }
+
+    [CommandOption("--output <Output>")]
+    [Description(@"Output of the routes: table (default), json or markdown. With json and markdown only the result is printed, e.g. for scripts and LLM agents.")]
+    [DefaultValue(OutputFormat.Table)]
+    public string Output { get; set; } = OutputFormat.Table;
+
+    /// <summary>
+    /// The methods of --method, uppercase and with comma-separated values split up.
+    /// </summary>
+    public IReadOnlyList<string> GetMethods()
+    {
+        return (Method ?? [])
+            .SelectMany(m => m.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Select(m => m.ToUpperInvariant())
+            .Distinct()
+            .ToList();
+    }
+
     public override ValidationResult Validate()
     {
-        return Timeout > 0
-            ? ValidationResult.Success()
-            : ValidationResult.Error("--timeout must be greater than 0.");
+        if (Timeout <= 0)
+        {
+            return ValidationResult.Error("--timeout must be greater than 0.");
+        }
+
+        if (!OutputFormat.All.Contains(Output))
+        {
+            return ValidationResult.Error($"Value '{Markup.Escape(Output)}' for --output is not valid. Valid values are: {string.Join(", ", OutputFormat.All)}");
+        }
+
+        var unknownMethods = GetMethods().Except(RouteService.Methods).ToList();
+        if (unknownMethods.Count > 0)
+        {
+            return ValidationResult.Error($"Unknown HTTP method '{Markup.Escape(string.Join("', '", unknownMethods))}' for --method. Valid values are: {string.Join(", ", RouteService.Methods)}");
+        }
+
+        return ValidationResult.Success();
     }
 }

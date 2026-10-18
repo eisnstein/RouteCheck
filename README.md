@@ -59,6 +59,58 @@ RouteCheck waits 20 seconds for your app to start (after building it). If your a
 routecheck --timeout 60
 ```
 
+### Filter routes
+
+The routes are sorted by path, and routes with the same path by method. To show only routes with certain HTTP methods, use the `method` option. It can be used multiple times or with comma-separated values:
+
+```sh
+routecheck --method GET -m post
+
+# or
+
+routecheck -m get,post
+```
+
+To show only routes whose path contains a text, use the `filter` option. With a wildcard (`*` or `%`), the pattern has to match the whole path. It can be used multiple times, a route has to match one of them:
+
+```sh
+# /pets, /pets/{id}, /users/{id}/pets, ...
+routecheck --filter pets
+
+# /pets, /pets/{id}, but not /users/{id}/pets
+routecheck -f "/pets*"
+```
+
+Matching is case-insensitive, like ASP.NET Core routing. `method` and `filter` can be combined.
+
+### Output for scripts and LLM agents
+
+With `--output json` or `--output markdown`, RouteCheck prints only the result, as one document: no status lines and no update notice.
+
+```sh
+routecheck --output json
+```
+
+```json
+{
+  "command": "check",
+  "project": "src/Api/Api.csproj",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/pets"
+    }
+  ],
+  "error": null
+}
+```
+
+- `project` is the project file relative to the current directory.
+- On an error, `error` contains the message and the exit code is `1`. Otherwise `error` is `null` and the exit code is `0`.
+- `--output markdown` prints the same as a Markdown table, e.g. for pull request comments or job summaries.
+
+### Environment
+
 The app is started with the environment `Development`, unless your launch profile or the `ASPNETCORE_ENVIRONMENT` environment variable sets another one.
 
 For help run:

@@ -3,24 +3,55 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Net;
 
+namespace RouteCheck.Services;
+
 public static class WebAppService
 {
-    // Number of output lines of the web app kept to explain a failed startup
+    // Number of output lines kept to explain a failed build or startup
     private const int MaxOutputLines = 30;
 
-    public static async Task<(Process webApp, int port)> StartWebApp(
-        string projectPath,
-        CancellationToken cancellationToken,
-        int? port = null,
-        TimeSpan? startupTimeout = null)
+    /// <summary>
+    /// Builds the project before starting it, so the startup timeout does not include the build.
+    /// </summary>
+    public static async Task BuildProject(string projectFile, CancellationToken cancellationToken)
     {
-        port ??= GetAvailablePort();
         var output = new ConcurrentQueue<string>();
-        Process process = StartProcess("dotnet", $"run --urls=http://localhost:{port}", projectPath, output);
+        using Process process = StartProcess(["build", projectFile, "--nologo", "--verbosity", "quiet"], projectFile, output);
 
         try
         {
-            await WaitForWebAppReadyAsync(process, port.Value, startupTimeout ?? TimeSpan.FromSeconds(20), output, cancellationToken);
+            await process.WaitForExitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            process.Kill(entireProcessTree: true);
+            throw;
+        }
+
+        if (process.ExitCode != 0)
+        {
+            // MSBuild repeats the errors in its summary, so only show each error once
+            var errors = output.Where(line => line.Contains(": error ")).Distinct().ToList();
+            var details = errors.Count > 0 ? errors : output.ToList();
+            throw new RouteCheckException($"Building the web application failed:{Environment.NewLine}{string.Join(Environment.NewLine, details)}");
+        }
+    }
+
+    public static async Task<(Process webApp, int port)> StartWebApp(
+        string projectFile,
+        TimeSpan startupTimeout,
+        CancellationToken cancellationToken)
+    {
+        int port = GetAvailablePort();
+        var output = new ConcurrentQueue<string>();
+        Process process = StartProcess(
+            ["run", "--project", projectFile, "--no-build", $"--urls=http://localhost:{port}"],
+            projectFile,
+            output);
+
+        try
+        {
+            await WaitForWebAppReadyAsync(process, port, startupTimeout, output, cancellationToken);
         }
         catch
         {
@@ -28,7 +59,7 @@ public static class WebAppService
             throw;
         }
 
-        return (process, port.Value);
+        return (process, port);
     }
 
     public static void StopWebApp(Process process)
@@ -61,22 +92,34 @@ public static class WebAppService
         return port;
     }
 
-    private static Process StartProcess(string fileName, string arguments, string workingDirectory, ConcurrentQueue<string> output)
+    private static Process StartProcess(string[] arguments, string projectFile, ConcurrentQueue<string> output)
     {
-        var process = new Process
+        var startInfo = new ProcessStartInfo
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = fileName,
-                Arguments = arguments,
-                WorkingDirectory = workingDirectory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-            }
+            FileName = "dotnet",
+            // The content root of the web app is the working directory
+            WorkingDirectory = Path.GetDirectoryName(projectFile),
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
         };
 
-        // The redirected output has to be read continuously, otherwise the web app
+        foreach (string argument in arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        // The OpenAPI endpoint is usually only mapped in Development. A launch profile
+        // or an environment set by the user still takes precedence.
+        if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") is null
+            && Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") is null)
+        {
+            startInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
+        }
+
+        var process = new Process { StartInfo = startInfo };
+
+        // The redirected output has to be read continuously, otherwise the process
         // blocks as soon as the pipe buffer is full.
         void Collect(object _, DataReceivedEventArgs e)
         {
@@ -119,8 +162,8 @@ public static class WebAppService
             {
                 // Wait until the remaining output has been read
                 process.WaitForExit();
-                throw new InvalidOperationException(
-                    $"The web application process exited before it started accepting requests. Output:{Environment.NewLine}{string.Join(Environment.NewLine, output)}");
+                throw new RouteCheckException(
+                    $"The web application exited before it started accepting requests. Output:{Environment.NewLine}{string.Join(Environment.NewLine, output)}");
             }
 
             if (await IsPortOpenAsync(port, cancellationToken))
@@ -131,7 +174,8 @@ public static class WebAppService
             await Task.Delay(250, cancellationToken);
         }
 
-        throw new TimeoutException($"Timed out waiting for the web application to start listening on port {port}.");
+        throw new RouteCheckException(
+            $"Timed out after {timeout.TotalSeconds:0} seconds waiting for the web application to listen on port {port}. Use --timeout to wait longer. Output:{Environment.NewLine}{string.Join(Environment.NewLine, output)}");
     }
 
     private static async Task<bool> IsPortOpenAsync(int port, CancellationToken cancellationToken)

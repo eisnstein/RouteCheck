@@ -8,6 +8,12 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 
 ### Enhancements
 
+- The web app is now built before it is started, and build errors are shown. The startup timeout no longer includes the build.
+- New `--timeout` option for the seconds to wait for the web app to start (default 20).
+- `--path` can now also be a project file. RouteCheck looks for a `*.csproj` file instead of `Program.cs`, so projects with their entry point in another file work too. If a directory contains several project files, RouteCheck lists them.
+- The web app is started in the `Development` environment, so the OpenAPI endpoint is available without a launch profile. A launch profile or `ASPNETCORE_ENVIRONMENT` still takes precedence.
+- Clear error messages when the OpenAPI endpoint is missing (with a hint about `AddOpenApi()` and `MapOpenApi()`), fails or returns no OpenAPI document.
+- The option `--openApiEndpoint` is now called `--openapi-endpoint`. The old name still works.
 - When the web app exits before it is ready, the error now shows its last output lines, e.g. the exception it crashed with.
 - Ctrl+C cancels the check and stops the started web app.
 - GitHub releases now take their notes from this changelog.

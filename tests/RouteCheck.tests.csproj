@@ -23,4 +23,11 @@
     <ProjectReference Include="..\src\RouteCheck.csproj" />
   </ItemGroup>
 
+  <!-- Web apps started by the end-to-end tests, they are built on their own -->
+  <ItemGroup>
+    <Compile Remove="Fixtures/**" />
+    <None Remove="Fixtures/**" />
+    <Content Remove="Fixtures/**" />
+  </ItemGroup>
+
 </Project>

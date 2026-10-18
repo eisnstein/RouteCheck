@@ -24,7 +24,7 @@ public static class OutputService
             {
                 var method = operation.Key.ToString();
                 var methodColor = GetMethodColor(method);
-                table.AddRow($"[{methodColor}]{method}[/]", path.Key);
+                table.AddRow($"[{methodColor}]{method}[/]", Markup.Escape(path.Key));
             }
         }
 

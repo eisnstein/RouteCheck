@@ -5,21 +5,29 @@ using NuGet.Versioning;
 
 namespace RouteCheck.Services;
 
-public class NuGetApiService
+public class NuGetApiService : INuGetApiService
 {
     private readonly ILogger _logger = NullLogger.Instance;
-    private readonly CancellationToken _cancellationToken = CancellationToken.None;
     private readonly SourceCacheContext _cache = new();
-    private readonly FindPackageByIdResource _resource;
+    private readonly Lazy<Task<FindPackageByIdResource>> _resource;
 
     public NuGetApiService()
     {
+        // Getting a resource downloads the feed's service index, so it is done lazily
+        // on first use. Otherwise creating this service would already fail when offline.
         var repository = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json");
-        _resource = repository.GetResource<FindPackageByIdResource>(_cancellationToken);
+        _resource = new(() => GetResourceAsync<FindPackageByIdResource>(repository));
     }
 
-    public Task<IEnumerable<NuGetVersion>> GetPackageVersions(string packageName)
+    private static async Task<T> GetResourceAsync<T>(SourceRepository repository) where T : class, INuGetResource
     {
-        return _resource.GetAllVersionsAsync(packageName, _cache, _logger, _cancellationToken);
+        return await repository.GetResourceAsync<T>(CancellationToken.None)
+            ?? throw new InvalidOperationException($"The NuGet feed does not provide a {typeof(T).Name}.");
+    }
+
+    public async Task<IEnumerable<NuGetVersion>> GetPackageVersions(string packageName, CancellationToken cancellationToken)
+    {
+        var resource = await _resource.Value;
+        return await resource.GetAllVersionsAsync(packageName, _cache, _logger, cancellationToken);
     }
 }

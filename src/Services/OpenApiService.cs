@@ -2,11 +2,11 @@ using Microsoft.OpenApi;
 
 public static class OpenApiService
 {
-    public static async Task<OpenApiDocument> GetOpenApiJsonAsync(int port, string endpoint = "openapi/v1.json")
+    public static async Task<OpenApiDocument> GetOpenApiJsonAsync(int port, string endpoint = "openapi/v1.json", CancellationToken cancellationToken = default)
     {
         var url = await BuildUrlAsync(port, endpoint);
 
-        var (openApiDoc, _) = await OpenApiDocument.LoadAsync(url);
+        var (openApiDoc, _) = await OpenApiDocument.LoadAsync(url, token: cancellationToken);
         if (openApiDoc is null)
         {
             throw new Exception("Failed to load OpenAPI document.");

@@ -9,9 +9,29 @@ namespace RouteCheck.Services;
 
 public static class RouteCheckService
 {
-    public static async Task CheckForNewRouteCheckVersion(NuGetApiService nuGetApiService)
+    private static readonly TimeSpan VersionCheckTimeout = TimeSpan.FromSeconds(3);
+
+    public static async Task CheckForNewRouteCheckVersion(
+        INuGetApiService nuGetApiService,
+        IAnsiConsole console,
+        CancellationToken cancellationToken)
     {
-        IEnumerable<NuGetVersion> result = await nuGetApiService.GetPackageVersions("RouteCheck");
+        IEnumerable<NuGetVersion> result;
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(VersionCheckTimeout);
+            result = await nuGetApiService
+                .GetPackageVersions("RouteCheck", timeout.Token)
+                .WaitAsync(timeout.Token);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // This check is optional, so it must never stop the actual command,
+            // e.g. when offline, behind a proxy or when the feed is slow.
+            return;
+        }
+
         ImmutableList<NuGetVersion> versions = result.ToImmutableList();
 
         if (versions is { Count: 0 })
@@ -29,20 +49,18 @@ public static class RouteCheckService
         var currentVersionStr = assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
             .InformationalVersion;
-        if (currentVersionStr is null)
+        if (!NuGetVersion.TryParse(currentVersionStr, out var currentVersion))
         {
             return;
         }
 
-        var currentVersion = NuGetVersion.Parse(currentVersionStr);
-
         // If there is a newer version available, show information
         if (latestVersion > currentVersion)
         {
-            AnsiConsole.MarkupLine($"[dim]INFO:[/] A new version of RouteCheck is available: {currentVersion} -> {latestVersion}");
-            AnsiConsole.MarkupLine($"[dim]INFO:[/] Changelog: [link]https://github.com/eisnstein/RouteCheck/blob/main/CHANGELOG.md[/]");
-            AnsiConsole.MarkupLine("[dim]INFO:[/] Run [blue]dotnet tool update --global RouteCheck[/] to update");
-            Console.WriteLine();
+            console.MarkupLine($"[dim]INFO:[/] A new version of RouteCheck is available: {currentVersion} -> {latestVersion}");
+            console.MarkupLine($"[dim]INFO:[/] Changelog: [link]https://github.com/eisnstein/RouteCheck/blob/main/CHANGELOG.md[/]");
+            console.MarkupLine("[dim]INFO:[/] Run [blue]dotnet tool update --global RouteCheck[/] to update");
+            console.WriteLine();
         }
     }
 }

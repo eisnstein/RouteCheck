@@ -6,6 +6,8 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 
 ## Unreleased
 
+## 0.2.1 (2026-10-19)
+
 ### Enhancements
 
 - The routes table no longer has a border.

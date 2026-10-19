@@ -36,17 +36,14 @@ routecheck
 This should give you something like this:
 
 ```
-+--------+--------------------------+-------------------------+
-| Method | Path                     | Handler                 |
-|--------+--------------------------+-------------------------|
-| ANY    | /                        | Page /Index             |
-| GET    | /api/orders              | OrdersController.List   |
-| GET    | /api/orders/{id:int}     | OrdersController.Get    |
-| PUT    | /api/orders/{id:int}     | OrdersController.Update |
-| GET    | /health                  | Health.Check            |
-| ANY    | /Orders/Details/{id:int} | Page /Orders/Details    |
-| GET    | /pets                    | Program (lambda)        |
-+--------+--------------------------+-------------------------+
+Method Path                     Handler
+ANY    /                        Page /Index
+GET    /api/orders              OrdersController.List
+GET    /api/orders/{id:int}     OrdersController.Get
+PUT    /api/orders/{id:int}     OrdersController.Update
+GET    /health                  Health.Check
+ANY    /Orders/Details/{id:int} Page /Orders/Details
+GET    /pets                    Program (lambda)
 ```
 
 - `ANY` means the route accepts every HTTP method, like Razor Pages do.

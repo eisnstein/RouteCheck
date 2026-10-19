@@ -6,6 +6,8 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 
 ## Unreleased
 
+## 0.2.0 (2026-10-19)
+
 ### Enhancements
 
 - RouteCheck now reads the routes from the app itself instead of its OpenAPI document. It shows all endpoints: minimal APIs, controllers, Razor Pages and everything else mapped as an endpoint. The `Microsoft.AspNetCore.OpenApi` package is no longer needed.

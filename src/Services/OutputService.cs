@@ -13,7 +13,7 @@ public static class OutputService
         }
 
         var table = new Table();
-        table.Border = TableBorder.Ascii2;
+        table.Border = TableBorder.None;
         table.AddColumn("Method");
         table.AddColumn("Path");
         table.AddColumn("Handler");

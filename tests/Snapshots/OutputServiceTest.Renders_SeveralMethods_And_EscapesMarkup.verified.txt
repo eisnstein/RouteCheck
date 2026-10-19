@@ -1,8 +1,5 @@
-﻿+--------+----------------+------------------+
-| Method | Path           | Handler          |
-|--------+----------------+------------------|
-| ANY    | /              | Page /Index      |
-| GET    | /pets          | Program (lambda) |
-| POST   | /pets          |                  |
-| DELETE | /pets/[legacy] | [Legacy] handler |
-+--------+----------------+------------------+
+﻿Method Path           Handler         
+ANY    /              Page /Index     
+GET    /pets          Program (lambda)
+POST   /pets                          
+DELETE /pets/[legacy] [Legacy] handler

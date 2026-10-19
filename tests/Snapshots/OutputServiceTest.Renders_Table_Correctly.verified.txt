@@ -1,5 +1,2 @@
-﻿+--------+-------+---------------------+
-| Method | Path  | Handler             |
-|--------+-------+---------------------|
-| GET    | /pets | PetsController.List |
-+--------+-------+---------------------+
+﻿Method Path  Handler            
+GET    /pets PetsController.List

@@ -6,6 +6,8 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 
 ## Unreleased
 
+## 0.2.2 (2026-11-08)
+
 ### Enhancements
 
 - New `--framework` option to choose the target framework to build and run, e.g. `--framework net9.0`.

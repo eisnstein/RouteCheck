@@ -48,6 +48,7 @@ GET    /pets                    Program (lambda)
 
 - `ANY` means the route accepts every HTTP method, like Razor Pages do.
 - For minimal APIs, the handler is the method passed to `MapGet` etc. A lambda is shown as `(lambda)` with the class it is declared in.
+- Controllers with conventional routes (`MapControllerRoute`) are shown with one row per action and their controller and action filled in, e.g. `/Home/About/{id?}`. Shorter URLs from route defaults, like `/` for `HomeController.Index`, are not listed separately.
 
 You can also provide a path to the web app's directory or project file via the `path` option:
 
@@ -63,6 +64,12 @@ RouteCheck waits 20 seconds for your app to start (after building it). If your a
 
 ```sh
 routecheck --timeout 60
+```
+
+If your app targets multiple frameworks, choose the one to build and run with the `framework` option:
+
+```sh
+routecheck --framework net9.0
 ```
 
 ### Filter routes

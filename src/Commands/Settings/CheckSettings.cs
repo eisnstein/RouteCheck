@@ -20,6 +20,10 @@ public sealed class CheckSettings : CommandSettings
     [CommandOption("--openapi-endpoint|--openApiEndpoint <OpenApiEndpoint>", IsHidden = true)]
     public string? OpenApiEndpoint { get; set; }
 
+    [CommandOption("--framework <Framework>")]
+    [Description(@"Target framework to build and run, e.g. net9.0. Required if the web app targets multiple frameworks.")]
+    public string? Framework { get; set; }
+
     [CommandOption("--timeout <Seconds>")]
     [Description(@"Seconds to wait for the web app to start and report its routes, after it has been built.")]
     [DefaultValue(20)]

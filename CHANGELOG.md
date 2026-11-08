@@ -6,6 +6,15 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 
 ## Unreleased
 
+### Enhancements
+
+- New `--framework` option to choose the target framework to build and run, e.g. `--framework net9.0`.
+
+### Bug fixes
+
+- Projects targeting multiple frameworks can now be checked, using `--framework`. Before, RouteCheck could not run them.
+- Controllers with conventional routes (`MapControllerRoute`) are now shown with their real paths, e.g. `/Home/About/{id?}`. Before, every action showed the route template, and there was an extra row for an endpoint that only generates links.
+
 ## 0.2.1 (2026-10-19)
 
 ### Enhancements

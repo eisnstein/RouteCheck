@@ -7,6 +7,7 @@ public class CheckCommandTests
     // Tests building the same fixture at the same time would lock each other's files
     private const string SampleApi = "SampleApi";
     private const string MvcApp = "MvcApp";
+    private const string ConventionalApp = "ConventionalApp";
 
     [Test]
     public async Task Returns_Error_When_ThereIsNoProject()
@@ -76,6 +77,39 @@ public class CheckCommandTests
             "ANY /Index Page /Index",
             "ANY /Orders/Details/{id:int} Page /Orders/Details",
         ], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+    }
+
+    /// <summary>
+    /// Builds and runs a real web app with conventional MVC routes for the given
+    /// framework, so it takes a few seconds.
+    /// </summary>
+    [Test]
+    [NotInParallel(ConventionalApp)]
+    [Arguments("net8.0")]
+    [Arguments("net9.0")]
+    public async Task Lists_Routes_OfConventionalControllers_ForTheGivenFramework(string framework)
+    {
+        var routes = await RunJson(ConventionalApp, "--framework", framework);
+
+        await Assert.That(routes).IsEquivalentTo(
+        [
+            "ANY /Home/About/{id:int?} HomeController.About",
+            "ANY /Home/Index/{id:int?} HomeController.Index",
+            "GET /Reports/Monthly/{id:int?} ReportsController.Monthly",
+        ], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [NotInParallel(ConventionalApp)]
+    public async Task Returns_Error_Naming_TheFrameworkOption_When_ProjectIsMultiTargeted()
+    {
+        var app = TestHelper.CreateCommandAppTester();
+
+        var result = await app.RunAsync(["check", "--path", TestHelper.GetFixturePath(ConventionalApp), "--timeout", "60", "--output", "json"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(1);
+        using var document = JsonDocument.Parse(result.Output);
+        await Assert.That(document.RootElement.GetProperty("error").GetString()).Contains("--framework");
     }
 
     [Test]

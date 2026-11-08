@@ -16,10 +16,11 @@ public static class WebAppService
     /// <summary>
     /// Builds the project before running it, so the timeout does not include the build.
     /// </summary>
-    public static async Task BuildProject(string projectFile, CancellationToken cancellationToken)
+    /// <param name="framework">The target framework to build, e.g. net9.0. Required to run a multi-targeted project.</param>
+    public static async Task BuildProject(string projectFile, string? framework, CancellationToken cancellationToken)
     {
         var output = new ConcurrentQueue<string>();
-        using Process process = StartProcess(["build", projectFile, "--nologo", "--verbosity", "quiet"], projectFile, output, new Dictionary<string, string>());
+        using Process process = StartProcess(["build", projectFile, "--nologo", "--verbosity", "quiet", .. FrameworkArguments(framework)], projectFile, output, new Dictionary<string, string>());
 
         try
         {
@@ -45,6 +46,7 @@ public static class WebAppService
     /// </summary>
     public static async Task<IReadOnlyList<EndpointRoute>> ReadEndpoints(
         string projectFile,
+        string? framework,
         TimeSpan timeout,
         CancellationToken cancellationToken)
     {
@@ -61,7 +63,7 @@ public static class WebAppService
         };
 
         var output = new ConcurrentQueue<string>();
-        using Process process = StartProcess(["run", "--project", projectFile, "--no-build"], projectFile, output, environment);
+        using Process process = StartProcess(["run", "--project", projectFile, "--no-build", .. FrameworkArguments(framework)], projectFile, output, environment);
 
         try
         {
@@ -94,6 +96,11 @@ public static class WebAppService
             Kill(process);
             File.Delete(endpointsFile);
         }
+    }
+
+    private static string[] FrameworkArguments(string? framework)
+    {
+        return framework is null ? [] : ["--framework", framework];
     }
 
     // Keeps startup hooks of the app's environment, e.g. of an APM agent

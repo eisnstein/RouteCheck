@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -27,7 +28,7 @@ internal sealed class EndpointsServer(IServiceProvider services, string endpoint
         where TContext : notnull
     {
         var endpoints = services.GetService<EndpointDataSource>()?.Endpoints ?? [];
-        var routes = endpoints.OfType<RouteEndpoint>().Select(ToRoute).ToList();
+        var routes = endpoints.OfType<RouteEndpoint>().Where(CanReceiveRequests).Select(ToRoute).ToList();
 
         File.WriteAllText(endpointsFile, JsonSerializer.Serialize(routes, EndpointsContract.JsonOptions));
 
@@ -52,13 +53,53 @@ internal sealed class EndpointsServer(IServiceProvider services, string endpoint
         return features;
     }
 
+    // Conventional routes also add an endpoint that is only used for generating links
+    private static bool CanReceiveRequests(Endpoint endpoint)
+    {
+        return endpoint.Metadata.GetMetadata<ISuppressMatchingMetadata>()?.SuppressMatching != true;
+    }
+
     private static EndpointRoute ToRoute(RouteEndpoint endpoint)
     {
         return new EndpointRoute(
             endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods.ToList() ?? [],
-            endpoint.RoutePattern.RawText ?? "",
+            GetPattern(endpoint),
             // The display name of e.g. SignalR hubs or health checks is the best there is
             GetHandler(endpoint) ?? endpoint.DisplayName);
+    }
+
+    // The raw text of a conventional route is the template all its actions share, e.g.
+    // "{controller=Home}/{action=Index}/{id?}". The controller and action of this
+    // endpoint are its required values, so they are filled in: "Home/About/{id?}".
+    private static string GetPattern(RouteEndpoint endpoint)
+    {
+        var pattern = endpoint.RoutePattern;
+
+        return endpoint.Metadata.GetMetadata<ControllerActionDescriptor>() is { AttributeRouteInfo: null }
+            ? string.Join('/', pattern.PathSegments.Select(segment => string.Concat(segment.Parts.Select(part => FormatPart(part, pattern.RequiredValues)))))
+            : pattern.RawText ?? "";
+    }
+
+    private static string FormatPart(RoutePatternPart part, IReadOnlyDictionary<string, object?> requiredValues)
+    {
+        return part switch
+        {
+            RoutePatternLiteralPart literal => literal.Content,
+            RoutePatternSeparatorPart separator => separator.Content,
+            RoutePatternParameterPart parameter when requiredValues.GetValueOrDefault(parameter.Name) is string { Length: > 0 } value => value,
+            RoutePatternParameterPart parameter => FormatParameter(parameter),
+            _ => "",
+        };
+    }
+
+    private static string FormatParameter(RoutePatternParameterPart parameter)
+    {
+        var catchAll = !parameter.IsCatchAll ? "" : parameter.EncodeSlashes ? "*" : "**";
+        var policies = string.Concat(parameter.ParameterPolicies.Where(p => p.Content is not null).Select(p => ":" + p.Content));
+        var defaultValue = parameter.Default is null ? "" : "=" + parameter.Default;
+        var optional = parameter.IsOptional ? "?" : "";
+
+        return $"{{{catchAll}{parameter.Name}{policies}{defaultValue}{optional}}}";
     }
 
     private static string? GetHandler(Endpoint endpoint)

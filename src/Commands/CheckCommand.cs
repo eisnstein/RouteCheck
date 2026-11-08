@@ -51,11 +51,11 @@ public class CheckCommand : AsyncCommand<CheckSettings>
 
             Status($"Building web application [grey]{Markup.Escape(projectFile)}[/]...");
 
-            await WebAppService.BuildProject(projectFile, cancellationToken);
+            await WebAppService.BuildProject(projectFile, settings.Framework, cancellationToken);
 
             Status("Starting web application to read its routes...");
 
-            var endpoints = await WebAppService.ReadEndpoints(projectFile, TimeSpan.FromSeconds(settings.Timeout), cancellationToken);
+            var endpoints = await WebAppService.ReadEndpoints(projectFile, settings.Framework, TimeSpan.FromSeconds(settings.Timeout), cancellationToken);
             var routes = RouteService.Filter(RouteService.GetRoutes(endpoints), settings.GetMethods(), settings.Filter ?? []);
 
             if (isStructuredOutput)

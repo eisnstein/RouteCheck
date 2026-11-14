@@ -23,7 +23,14 @@ public sealed record Route(string Method, string Path, string? Handler, string? 
 /// <param name="Methods">The HTTP methods, uppercase. Routes accepting any method match every method.</param>
 /// <param name="Paths">Texts the path contains, or wildcard patterns it matches.</param>
 /// <param name="AnonymousOnly">Only routes anyone may request.</param>
-public sealed record RouteFilter(IReadOnlyCollection<string> Methods, IReadOnlyCollection<string> Paths, bool AnonymousOnly = false)
+/// <param name="Handlers">Texts the handler contains, or wildcard patterns it matches.</param>
+/// <param name="Excludes">Texts or wildcard patterns of paths to leave out, e.g. framework routes.</param>
+public sealed record RouteFilter(
+    IReadOnlyCollection<string> Methods,
+    IReadOnlyCollection<string> Paths,
+    bool AnonymousOnly = false,
+    IReadOnlyCollection<string>? Handlers = null,
+    IReadOnlyCollection<string>? Excludes = null)
 {
     public static readonly RouteFilter None = new([], []);
 }
@@ -69,17 +76,22 @@ public static class RouteService
     public const string Anonymous = EndpointsContract.Anonymous;
 
     /// <summary>
-    /// Keeps the routes with one of the methods (if any are given) and whose path
-    /// matches one of the patterns (if any are given). Routes accepting any method
-    /// match every method.
+    /// Keeps the routes with one of the methods (if any are given), whose path
+    /// matches one of the patterns and whose handler one of the handler patterns
+    /// (if any are given), and whose path matches none of the excludes. Routes
+    /// accepting any method match every method.
     /// </summary>
     public static List<Route> Filter(IEnumerable<Route> routes, RouteFilter filter)
     {
         var pathMatchers = filter.Paths.Select(CreateMatcher).ToList();
+        var handlerMatchers = (filter.Handlers ?? []).Select(CreateMatcher).ToList();
+        var excludeMatchers = (filter.Excludes ?? []).Select(CreateMatcher).ToList();
 
         return routes
             .Where(r => filter.Methods.Count == 0 || r.Method == AnyMethod || filter.Methods.Contains(r.Method, StringComparer.OrdinalIgnoreCase))
             .Where(r => pathMatchers.Count == 0 || pathMatchers.Any(matches => matches(r.Path)))
+            .Where(r => handlerMatchers.Count == 0 || (r.Handler is not null && handlerMatchers.Any(matches => matches(r.Handler))))
+            .Where(r => !excludeMatchers.Any(matches => matches(r.Path)))
             .Where(r => !filter.AnonymousOnly || r.IsAnonymous)
             .ToList();
     }
@@ -117,8 +129,8 @@ public static class RouteService
     }
 
     // ASP.NET Core routing is case-insensitive, so matching is too.
-    // Without a wildcard, the text can be anywhere in the path. With a wildcard
-    // (* or %, like in PackCheck), the pattern has to match the whole path.
+    // Without a wildcard, the text can be anywhere in the path or handler. With a
+    // wildcard (* or %, like in PackCheck), the pattern has to match all of it.
     private static Func<string, bool> CreateMatcher(string pattern)
     {
         if (!pattern.Contains('*') && !pattern.Contains('%'))

@@ -106,6 +106,26 @@ public class RouteServiceTests
     }
 
     [Test]
+    [Arguments("orders")]
+    [Arguments("Orders*")]
+    [Arguments("*Controller.List")]
+    public async Task Filter_KeepsRoutes_WhoseHandlerMatches(string pattern)
+    {
+        // Routes without a handler never match
+        var routes = RouteService.Filter(Routes, new([], [], Handlers: [pattern]));
+
+        await Assert.That(routes.Select(r => $"{r.Method} {r.Path}")).IsEquivalentTo(["GET /orders"]);
+    }
+
+    [Test]
+    public async Task Filter_LeavesOut_ExcludedPaths()
+    {
+        var routes = RouteService.Filter(Routes, new(["GET"], [], Excludes: ["/pets*", "users"]));
+
+        await Assert.That(routes.Select(r => $"{r.Method} {r.Path}")).IsEquivalentTo(["ANY /", "GET /orders"]);
+    }
+
+    [Test]
     public async Task Filter_KeepsAnonymousRoutes_With_AnonymousOnly()
     {
         List<Route> routes = [new("GET", "/pets", null, "Anonymous"), new("POST", "/pets", null, "Policy: Admin"), new("GET", "/legacy", null)];

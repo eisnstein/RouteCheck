@@ -95,7 +95,17 @@ routecheck --filter pets
 routecheck -f "/pets*"
 ```
 
-Matching is case-insensitive, like ASP.NET Core routing. `method` and `filter` can be combined. Routes accepting any method (`ANY`) are shown for every `method`.
+To show only routes of certain handlers, use the `handler` option. To leave out routes, e.g. of the framework, use the `exclude` option. Both match like `filter`, `exclude` against the path:
+
+```sh
+# The routes of OrdersController
+routecheck --handler "OrdersController.*"
+
+# Without Blazor's routes
+routecheck -x "/_framework/*" -x "/_blazor*"
+```
+
+Matching is case-insensitive, like ASP.NET Core routing. All filters can be combined. Routes accepting any method (`ANY`) are shown for every `method`.
 
 To review which routes are public, show only the routes anyone may request with `--anonymous`:
 

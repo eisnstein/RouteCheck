@@ -37,6 +37,14 @@ public sealed class CheckSettings : CommandSettings
     [Description(@"Show only routes whose path contains the given text, or matches the given wildcard pattern (* or %) (can be used multiple times).")]
     public string[]? Filter { get; set; }
 
+    [CommandOption("--handler <Pattern>")]
+    [Description(@"Show only routes whose handler contains the given text, or matches the given wildcard pattern (* or %), e.g. Orders* (can be used multiple times).")]
+    public string[]? Handler { get; set; }
+
+    [CommandOption("-x|--exclude <Pattern>")]
+    [Description(@"Leave out routes whose path contains the given text, or matches the given wildcard pattern (* or %), e.g. /_framework/* (can be used multiple times).")]
+    public string[]? Exclude { get; set; }
+
     [CommandOption("--anonymous")]
     [Description(@"Show only routes anyone may request, without signing in.")]
     public bool Anonymous { get; set; }
@@ -67,9 +75,9 @@ public sealed class CheckSettings : CommandSettings
     }
 
     /// <summary>
-    /// Which routes to show, from --method, --filter and --anonymous.
+    /// Which routes to show, from --method, --filter, --handler, --exclude and --anonymous.
     /// </summary>
-    public RouteFilter GetFilter() => new(GetMethods(), Filter ?? [], Anonymous);
+    public RouteFilter GetFilter() => new(GetMethods(), Filter ?? [], Anonymous, Handler ?? [], Exclude ?? []);
 
     public override ValidationResult Validate()
     {

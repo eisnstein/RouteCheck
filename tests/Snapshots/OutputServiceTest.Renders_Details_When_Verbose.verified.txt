@@ -1,0 +1,3 @@
+﻿Method Path  Handler          Name     Tags Accepts          Produces                         
+GET    /pets Program (lambda) ListPets Pets                  200 application/json             
+POST   /pets Program (lambda)               application/json 201; 400 application/problem+json

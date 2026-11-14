@@ -30,4 +30,17 @@ public static class EndpointsContract
 /// and method match the same requests, so routing can't choose between them.
 /// </param>
 /// <param name="Auth">Who may request it: "Anonymous", or what is required, e.g. "Policy: Admin" or "Roles: Admin, Editor".</param>
-public sealed record EndpointRoute(IReadOnlyList<string> Methods, string Pattern, string? Handler, string? MatchKey = null, string? Auth = null);
+/// <param name="Name">The endpoint or route name, e.g. of WithName("GetPet"), used to generate links.</param>
+/// <param name="Tags">The OpenAPI tags, e.g. "Pets, Owners".</param>
+/// <param name="Accepts">The content types of the request body, e.g. "application/json".</param>
+/// <param name="Produces">The responses, e.g. "200 application/json; 404".</param>
+public sealed record EndpointRoute(
+    IReadOnlyList<string> Methods,
+    string Pattern,
+    string? Handler,
+    string? MatchKey = null,
+    string? Auth = null,
+    string? Name = null,
+    string? Tags = null,
+    string? Accepts = null,
+    string? Produces = null);

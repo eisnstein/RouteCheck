@@ -73,6 +73,10 @@ public sealed class CheckSettings : CommandSettings
     [Description(@"Exit with code 2 if there are problems with the routes, e.g. ambiguous routes, or routes of the --baseline were removed. For CI jobs.")]
     public bool Strict { get; set; }
 
+    [CommandOption("--verbose")]
+    [Description(@"Show more about each route: its name, tags, accepted content types and responses.")]
+    public bool Verbose { get; set; }
+
     [CommandOption("--output <Output>")]
     [Description(@"Output of the routes: table (default), json or markdown. With json and markdown only the result is printed, e.g. for scripts and LLM agents.")]
     [DefaultValue(OutputFormat.Table)]

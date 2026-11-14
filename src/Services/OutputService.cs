@@ -2,9 +2,44 @@ using Spectre.Console;
 
 namespace RouteCheck.Services;
 
+/// <summary>
+/// A column of the routes table.
+/// </summary>
+/// <param name="GetValue">The value of a route (plain text).</param>
+public sealed record RouteColumn(string Header, Func<Route, string?> GetValue);
+
 public static class OutputService
 {
-    public static void DisplayRoutes(IAnsiConsole console, IReadOnlyList<Route> routes)
+    /// <summary>
+    /// The columns of the routes table, in the console and in Markdown.
+    /// </summary>
+    /// <param name="verbose">Adds the columns of --verbose.</param>
+    public static List<RouteColumn> GetColumns(IReadOnlyList<Route> routes, bool verbose)
+    {
+        List<RouteColumn> columns =
+        [
+            new("Method", r => r.Method),
+            new("Path", r => r.Path),
+            new("Handler", r => r.Handler),
+        ];
+
+        if (ShowAuth(routes))
+        {
+            columns.Add(new("Auth", r => r.Auth));
+        }
+
+        if (verbose)
+        {
+            columns.Add(new("Name", r => r.Name));
+            columns.Add(new("Tags", r => r.Tags));
+            columns.Add(new("Accepts", r => r.Accepts));
+            columns.Add(new("Produces", r => r.Produces));
+        }
+
+        return columns;
+    }
+
+    public static void DisplayRoutes(IAnsiConsole console, IReadOnlyList<Route> routes, bool verbose = false)
     {
         if (routes.Count == 0)
         {
@@ -12,37 +47,35 @@ public static class OutputService
             return;
         }
 
-        var showAuth = ShowAuth(routes);
+        var columns = GetColumns(routes, verbose);
 
         var table = new Table();
         table.Border = TableBorder.None;
-        table.AddColumn("Method");
-        table.AddColumn("Path");
-        table.AddColumn("Handler");
-        if (showAuth)
+        foreach (var column in columns)
         {
-            table.AddColumn("Auth");
+            table.AddColumn(column.Header);
         }
 
         foreach (Route route in routes)
         {
-            var methodColor = GetMethodColor(route.Method);
-            List<string> cells =
-            [
-                $"[{methodColor}]{route.Method}[/]",
-                Markup.Escape(route.Path),
-                $"[grey]{Markup.Escape(route.Handler ?? "")}[/]",
-            ];
-
-            if (showAuth)
-            {
-                cells.Add(route.IsAnonymous ? $"[yellow]{RouteService.Anonymous}[/]" : Markup.Escape(route.Auth ?? ""));
-            }
-
-            table.AddRow(cells.ToArray());
+            table.AddRow(columns.Select(column => Format(column, route)).ToArray());
         }
 
         console.Write(table);
+    }
+
+    private static string Format(RouteColumn column, Route route)
+    {
+        var value = Markup.Escape(column.GetValue(route) ?? "");
+
+        return column.Header switch
+        {
+            "Method" => $"[{GetMethodColor(route.Method)}]{value}[/]",
+            "Path" => value,
+            "Auth" when route.IsAnonymous => $"[yellow]{value}[/]",
+            "Auth" => value,
+            _ => $"[grey]{value}[/]",
+        };
     }
 
     /// <summary>

@@ -8,8 +8,23 @@ namespace RouteCheck.Services;
 /// <param name="Method">The HTTP method, or <see cref="RouteService.AnyMethod"/>.</param>
 /// <param name="Auth">See <see cref="EndpointRoute.Auth"/>, <c>null</c> if unknown.</param>
 /// <param name="MatchKey">See <see cref="EndpointRoute.MatchKey"/>. Not part of the documents.</param>
-public sealed record Route(string Method, string Path, string? Handler, string? Auth = null, [property: JsonIgnore] string? MatchKey = null)
+/// <param name="Name">Details for --verbose, see <see cref="EndpointRoute"/>. Left out of the documents if <c>null</c>.</param>
+public sealed record Route(
+    string Method,
+    string Path,
+    string? Handler,
+    string? Auth = null,
+    [property: JsonIgnore] string? MatchKey = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Name = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Tags = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Accepts = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Produces = null)
 {
+    /// <summary>
+    /// The route without the details for --verbose.
+    /// </summary>
+    public Route WithoutDetails() => this with { Name = null, Tags = null, Accepts = null, Produces = null };
+
     /// <summary>
     /// Whether anyone may request the route, without signing in.
     /// </summary>
@@ -62,7 +77,7 @@ public static class RouteService
     {
         return endpoints
             .SelectMany(e => (e.Methods.Count == 0 ? [AnyMethod] : e.Methods)
-                .Select(method => new Route(method.ToUpperInvariant(), NormalizePath(e.Pattern), e.Handler, e.Auth, e.MatchKey)))
+                .Select(method => new Route(method.ToUpperInvariant(), NormalizePath(e.Pattern), e.Handler, e.Auth, e.MatchKey, e.Name, e.Tags, e.Accepts, e.Produces)))
             .Distinct()
             .OrderBy(r => r.Path, StringComparer.OrdinalIgnoreCase)
             .ThenBy(r => Array.IndexOf(Methods, r.Method) is var index and >= 0 ? index : int.MaxValue)

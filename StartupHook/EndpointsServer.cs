@@ -71,7 +71,21 @@ internal sealed class EndpointsServer(IServiceProvider services, string endpoint
             GetPattern(endpoint),
             // The display name of e.g. SignalR hubs or health checks is the best there is
             GetHandler(endpoint) ?? endpoint.DisplayName,
-            GetMatchKey(endpoint));
+            GetMatchKey(endpoint))
+        {
+            Name = endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName ?? endpoint.Metadata.GetMetadata<IRouteNameMetadata>()?.RouteName,
+            Tags = JoinOrNull(", ", endpoint.Metadata.GetOrderedMetadata<ITagsMetadata>().SelectMany(m => m.Tags)),
+            Accepts = JoinOrNull(", ", endpoint.Metadata.GetMetadata<IAcceptsMetadata>()?.ContentTypes ?? []),
+            Produces = JoinOrNull("; ", endpoint.Metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>()
+                .OrderBy(m => m.StatusCode)
+                .Select(m => m.ContentTypes.Any() ? $"{m.StatusCode} {string.Join(", ", m.ContentTypes)}" : $"{m.StatusCode}")),
+        };
+    }
+
+    private static string? JoinOrNull(string separator, IEnumerable<string> values)
+    {
+        var distinct = values.Distinct().ToList();
+        return distinct.Count == 0 ? null : string.Join(separator, distinct);
     }
 
     // Parameter names and defaults don't matter for matching: "pets/{id}" and "pets/{name}"

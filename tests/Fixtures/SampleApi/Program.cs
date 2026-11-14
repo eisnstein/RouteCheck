@@ -21,7 +21,7 @@ if (app.Environment.IsDevelopment())
     app.MapGet("/dev/info", () => "dev");
 }
 
-app.MapGet("/pets", () => Array.Empty<string>()).AllowAnonymous();
+app.MapGet("/pets", () => Array.Empty<string>()).AllowAnonymous().WithName("ListPets").WithTags("Pets");
 app.MapPost("/pets", (string name) => name).RequireAuthorization(policy => policy.RequireClaim("scope", "pets:write"));
 app.MapDelete("/pets/{id}", (int id) => id).RequireAuthorization("Admin");
 

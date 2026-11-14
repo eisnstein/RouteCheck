@@ -12,6 +12,7 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 - New `--strict` option to exit with code `2` if there are problems with the routes, e.g. in CI jobs.
 - New Auth column (and `auth` in `--output json`/`markdown`): who may request the route, e.g. `Anonymous`, `Authenticated`, `Policy: Admin` or `Roles: admin, editor`. It includes the fallback policy and global MVC `AuthorizeFilter`s, and is left out if anyone may request every route.
 - New `--anonymous` option to show only the routes anyone may request.
+- New `--verbose` option to show more about each route: its name, tags, accepted content types and responses.
 - New `-e|--environment` option to run the web app in another environment than `Development`, e.g. `-e Staging`. It wins over the launch profile.
 - New `-c|--configuration` option to build and run another configuration than `Debug`, e.g. `-c Release`.
 - New `--launch-profile` option to run the web app with a launch profile of `launchSettings.json`.

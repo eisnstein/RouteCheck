@@ -51,6 +51,12 @@ GET    /pets                    Program (lambda)        Authenticated (fallback)
 - For minimal APIs, the handler is the method passed to `MapGet` etc. A lambda is shown as `(lambda)` with the class it is declared in.
 - Controllers with conventional routes (`MapControllerRoute`) are shown with one row per action and their controller and action filled in, e.g. `/Home/About/{id?}`. Shorter URLs from route defaults, like `/` for `HomeController.Index`, are not listed separately.
 
+To see more about each route, use `--verbose`. It adds the route's name (e.g. of `WithName`), its tags, the content types of the request body it accepts and its responses (status codes and content types), as far as the app declares them:
+
+```sh
+routecheck --verbose
+```
+
 You can also provide a path to the web app's directory or project file via the `path` option:
 
 ```sh
@@ -180,6 +186,7 @@ routecheck --output json
 
 - `project` is the project file relative to the current directory.
 - `handler` is `null` if RouteCheck can't tell what handles the route.
+- With `--verbose`, routes also have `name`, `tags`, `accepts` and `produces`, if the app declares them.
 - `problems` lists the [problems](#problems), each with a `type` (e.g. `ambiguous-routes`), a `message` and its `routes`.
 - With `--baseline`, `baseline` contains the `added`, `removed` and `changed` routes (each change with `before`, `after` and a `description`). Otherwise it is `null`.
 - On an error, `error` contains the message and the exit code is `1`. Otherwise `error` is `null` and the exit code is `0`.

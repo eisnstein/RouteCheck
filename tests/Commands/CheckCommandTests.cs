@@ -298,6 +298,23 @@ public class CheckCommandTests
         await Assert.That(result.Output).Contains("exited before RouteCheck could read its endpoints");
     }
 
+    [Test]
+    [NotInParallel(SampleApi)]
+    [Arguments(true)]
+    [Arguments(false)]
+    public async Task Lists_Details_OnlyWithVerbose(bool verbose)
+    {
+        string[] verboseArgument = verbose ? ["--verbose"] : [];
+        var routes = await RunJson(SampleApi, r => r.ToString(), ["-f", "/pets%", "-m", "get", .. verboseArgument]);
+
+        using var route = JsonDocument.Parse(routes.First());
+        string? Get(string name) => route.RootElement.TryGetProperty(name, out var value) ? value.GetString() : null;
+
+        await Assert.That(Get("name")).IsEqualTo(verbose ? "ListPets" : null);
+        await Assert.That(Get("tags")).IsEqualTo(verbose ? "Pets" : null);
+        await Assert.That(Get("produces")).IsEqualTo(verbose ? "200 application/json" : null);
+    }
+
     // "METHOD /path Handler"
     private static string Handler(JsonElement route) => $"{route.GetProperty("method").GetString()} {route.GetProperty("path").GetString()} {route.GetProperty("handler").GetString()}";
 

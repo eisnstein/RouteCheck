@@ -10,12 +10,14 @@ namespace RouteCheck.Services;
 /// <param name="Problems">What is wrong with the routes, e.g. ambiguous routes.</param>
 /// <param name="Error">The error (plain text) that ended the run, if any.</param>
 /// <param name="Baseline">How the routes differ from the baseline, with --baseline.</param>
+/// <param name="Verbose">Whether the Markdown table has the columns of --verbose.</param>
 public sealed record CheckResult(
     string? Project,
     IReadOnlyList<Route> Routes,
     IReadOnlyList<RouteProblem> Problems,
     string? Error,
-    BaselineDiff? Baseline = null)
+    BaselineDiff? Baseline = null,
+    bool Verbose = false)
 {
     public static CheckResult Failed(string? project, string error) => new(project, [], [], error);
 }
@@ -63,18 +65,10 @@ public static class StructuredOutputService
             }
             else
             {
-                if (OutputService.ShowAuth(result.Routes))
-                {
-                    lines.Add("| Method | Path | Handler | Auth |");
-                    lines.Add("|---|---|---|---|");
-                    lines.AddRange(result.Routes.Select(r => $"| {r.Method} | `{Escape(r.Path)}` | {Escape(r.Handler ?? "")} | {Escape(r.Auth ?? "")} |"));
-                }
-                else
-                {
-                    lines.Add("| Method | Path | Handler |");
-                    lines.Add("|---|---|---|");
-                    lines.AddRange(result.Routes.Select(r => $"| {r.Method} | `{Escape(r.Path)}` | {Escape(r.Handler ?? "")} |"));
-                }
+                var columns = OutputService.GetColumns(result.Routes, result.Verbose);
+                lines.Add($"| {string.Join(" | ", columns.Select(c => c.Header))} |");
+                lines.Add($"|{string.Concat(columns.Select(_ => "---|"))}");
+                lines.AddRange(result.Routes.Select(r => $"| {string.Join(" | ", columns.Select(c => FormatCell(c, r)))} |"));
             }
 
             if (result.Problems.Count > 0)
@@ -110,6 +104,12 @@ public static class StructuredOutputService
         {
             writer.WriteLine(line);
         }
+    }
+
+    private static string FormatCell(RouteColumn column, Route route)
+    {
+        var value = Escape(column.GetValue(route) ?? "");
+        return column.Header == "Path" ? $"`{value}`" : value;
     }
 
     private static string Escape(string cell) => cell.Replace("|", "\\|");

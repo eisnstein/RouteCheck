@@ -70,6 +70,11 @@ public class CheckCommand : AsyncCommand<CheckSettings>
 
             var endpoints = await WebAppService.ReadEndpoints(projectFile, runOptions, TimeSpan.FromSeconds(settings.Timeout), cancellationToken);
             var routes = RouteService.Filter(RouteService.GetRoutes(endpoints), settings.GetFilter());
+            if (!settings.Verbose)
+            {
+                routes = routes.Select(r => r.WithoutDetails()).ToList();
+            }
+
             var problems = RouteService.FindProblems(routes);
 
             // Filtered the same way, so e.g. --method only compares routes with these methods
@@ -79,12 +84,12 @@ public class CheckCommand : AsyncCommand<CheckSettings>
 
             if (isStructuredOutput)
             {
-                StructuredOutputService.Write(_console.Profile.Out.Writer, settings.Output, new CheckResult(project, routes, problems, null, baseline));
+                StructuredOutputService.Write(_console.Profile.Out.Writer, settings.Output, new CheckResult(project, routes, problems, null, baseline, settings.Verbose));
             }
             else
             {
                 _console.WriteLine();
-                OutputService.DisplayRoutes(_console, routes);
+                OutputService.DisplayRoutes(_console, routes, settings.Verbose);
                 OutputService.DisplayProblems(_console, problems);
                 if (baseline is not null)
                 {

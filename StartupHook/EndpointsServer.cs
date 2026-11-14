@@ -189,18 +189,24 @@ internal sealed class EndpointsServer(IServiceProvider services, string endpoint
 
     private static bool IsLambda(MethodInfo method)
     {
-        return method.Name.Contains('<') || method.DeclaringType?.IsDefined(typeof(CompilerGeneratedAttribute)) == true;
+        return method.Name.Contains('<') || IsClosure(method.DeclaringType);
     }
 
-    // Lambdas live in compiler-generated nested types like Program+<>c
+    // Lambdas live in compiler-generated nested types like Program+<>c, or in F#
+    // in closures like Program+Pipe #1 input at line 10@10
     private static Type? GetOuterType(Type? type)
     {
-        while (type?.IsDefined(typeof(CompilerGeneratedAttribute)) == true && type.DeclaringType is not null)
+        while (IsClosure(type) && type!.DeclaringType is not null)
         {
             type = type.DeclaringType;
         }
 
         return type;
+    }
+
+    private static bool IsClosure(Type? type)
+    {
+        return type is not null && (type.IsDefined(typeof(CompilerGeneratedAttribute)) || type.Name.Contains('@'));
     }
 
     private sealed class ServerAddressesFeature : IServerAddressesFeature

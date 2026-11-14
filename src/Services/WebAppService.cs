@@ -213,7 +213,16 @@ public static class WebAppService
         process.OutputDataReceived += Collect;
         process.ErrorDataReceived += Collect;
 
-        process.Start();
+        try
+        {
+            process.Start();
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            process.Dispose();
+            throw new RouteCheckException($"Could not start 'dotnet': {ex.Message}. Make sure the .NET SDK is installed and on the PATH.");
+        }
+
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 

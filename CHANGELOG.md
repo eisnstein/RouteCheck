@@ -21,6 +21,10 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 - New `-x|--exclude` option to leave out routes whose path contains the given text or matches a wildcard pattern, e.g. `-x "/_framework/*"`.
 - New `--baseline` option to compare the routes with a document written earlier with `--output json`, showing the added, removed and changed routes. With `--strict`, removed routes exit with code `2`.
 
+- F# (`*.fsproj`) and Visual Basic (`*.vbproj`) projects are supported. Lambdas in F# are shown as `Program (lambda)` too.
+- RouteCheck can be run from a directory with a solution (`*.sln` or `*.slnx`), e.g. the root of a repository, and `--path` can be a solution. It uses the solution's web project.
+- Unexpected errors, e.g. when `dotnet` is not on the PATH, are reported like other errors, so `--output json`/`markdown` always print a document.
+
 ### Bug fixes
 
 - Hosted services of the web app, e.g. a `BackgroundService` consuming a queue or sending emails, are no longer started. Before, they ran and did their work while RouteCheck read the routes.

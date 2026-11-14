@@ -10,7 +10,7 @@ namespace RouteCheck.Commands.Settings;
 public sealed class CheckSettings : CommandSettings
 {
     [CommandOption("-p|--path <Path>")]
-    [Description(@"Path to the web app's project file or directory. If not specified, the current directory will be used. Can be a relative or absolute path.")]
+    [Description(@"Path to the web app's project file or directory, or to a solution with one web project. If not specified, the current directory will be used. Can be a relative or absolute path.")]
     public string? Path { get; set; }
 
     /// <summary>

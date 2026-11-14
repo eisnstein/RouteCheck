@@ -57,7 +57,9 @@ To see more about each route, use `--verbose`. It adds the route's name (e.g. of
 routecheck --verbose
 ```
 
-You can also provide a path to the web app's directory or project file via the `path` option:
+RouteCheck looks for a project file (`*.csproj`, `*.fsproj` or `*.vbproj`) in the current directory. If there is none, but a solution (`*.sln` or `*.slnx`), it uses the solution's web project (`Microsoft.NET.Sdk.Web`), so you can run it from the root of your repository too.
+
+You can also provide a path to the web app's directory, project file or solution via the `path` option:
 
 ```sh
 routecheck --path /absolute/path/to/webapp

@@ -108,6 +108,12 @@ public class CheckCommand : AsyncCommand<CheckSettings>
         {
             return Fail(ex.Message, $"[red]Error:[/] {Markup.Escape(ex.Message)}");
         }
+        // Scripts and agents still get a document, e.g. when a file can't be read
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            var error = $"Unexpected error: {ex.Message}";
+            return Fail(error, $"[red]{Markup.Escape(error)}[/]{System.Environment.NewLine}[grey]{Markup.Escape(ex.ToString())}[/]");
+        }
 
         // Prints a status line (markup), unless the output is a JSON/Markdown document
         void Status(string markup)

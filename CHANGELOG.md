@@ -6,6 +6,10 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 
 ## Unreleased
 
+### Bug fixes
+
+- Hosted services of the web app, e.g. a `BackgroundService` consuming a queue or sending emails, are no longer started. Before, they ran and did their work while RouteCheck read the routes.
+
 ## 0.2.2 (2026-11-08)
 
 ### Enhancements

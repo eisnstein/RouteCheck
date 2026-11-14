@@ -128,7 +128,8 @@ routecheck --output json
 
 RouteCheck builds your app and starts it with `dotnet run`, adding a [startup hook](https://github.com/dotnet/runtime/blob/main/docs/design/features/host-startup-hook.md) that replaces the web server. Once the app has mapped its endpoints, the hook reads them from ASP.NET Core's routing and stops the app again. So your app never listens on a port, and nothing has to be added to it.
 
-- Your app's startup code runs as usual, e.g. hosted services or database migrations on startup.
+- Hosted services (e.g. a `BackgroundService` consuming a queue) are not started, so they can't do any work while RouteCheck reads the routes.
+- The rest of your app's startup code runs as usual, e.g. database migrations before `app.Run()`.
 - The app is started with the environment `Development`, unless your launch profile or the `ASPNETCORE_ENVIRONMENT` environment variable sets another one.
 - Startup hooks your app already uses (`DOTNET_STARTUP_HOOKS`) are kept.
 

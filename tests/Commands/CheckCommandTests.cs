@@ -56,6 +56,26 @@ public class CheckCommandTests
         ], TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
+    [Test]
+    [NotInParallel(SampleApi)]
+    public async Task DoesNotRun_HostedServices()
+    {
+        using var dir = TestHelper.CreateTempDirectory();
+        var marker = Path.Combine(dir.Path, "worker-ran.txt");
+        Environment.SetEnvironmentVariable("SAMPLEAPI_WORKER_MARKER", marker);
+
+        try
+        {
+            await RunJson(SampleApi);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("SAMPLEAPI_WORKER_MARKER", null);
+        }
+
+        await Assert.That(File.Exists(marker)).IsFalse();
+    }
+
     /// <summary>
     /// Builds and runs a real web app (.NET 8, Startup class, controllers and Razor Pages),
     /// so it takes a few seconds.

@@ -56,11 +56,36 @@ internal sealed class HostingEventObserver(string endpointsFile) : IObserver<Key
         }
     }
 
-    // The last registration of IServer wins over Kestrel's
     private void Register(IServiceCollection services)
     {
+        RemoveHostedServices(services);
+
+        // The last registration of IServer wins over Kestrel's
         services.AddSingleton<IServer>(provider => new EndpointsServer(provider, endpointsFile));
     }
+
+    // Hosted services would really do their work, e.g. consume a queue or send emails,
+    // although the app only runs to report its endpoints. Only the web host's own
+    // service is kept, as it builds the request pipeline and starts the server.
+    private static void RemoveHostedServices(IServiceCollection services)
+    {
+        for (var i = services.Count - 1; i >= 0; i--)
+        {
+            var service = services[i];
+            if (service.ServiceType == typeof(IHostedService) && !IsWebHostService(service))
+            {
+                services.RemoveAt(i);
+            }
+        }
+    }
+
+    private static bool IsWebHostService(ServiceDescriptor service)
+    {
+        var implementationType = service.IsKeyedService ? service.KeyedImplementationType : service.ImplementationType;
+        return implementationType?.FullName == WebHostServiceTypeName;
+    }
+
+    private const string WebHostServiceTypeName = "Microsoft.AspNetCore.Hosting.GenericWebHostService";
 
     public void OnCompleted()
     {

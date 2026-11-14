@@ -6,6 +6,8 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 
 ## Unreleased
 
+## 0.3.0 (2026-11-14)
+
 ### Enhancements
 
 - RouteCheck now reports ambiguous routes: routes with the same method that match the same requests, e.g. `GET /pets/{id}` and `GET /pets/{name}`, which fail at runtime with an `AmbiguousMatchException`. They are listed below the routes, and as `problems` in `--output json`/`markdown`.

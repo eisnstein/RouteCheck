@@ -31,10 +31,26 @@ public class StructuredOutputServiceTests
         await Assert.That(markdown).Contains("No routes found.");
     }
 
+    [Test]
+    [Arguments(OutputFormat.Json)]
+    [Arguments(OutputFormat.Markdown)]
+    public Task Writes_Problems(string output)
+    {
+        List<Route> routes = [new("GET", "/pets/{id}", "A.ById"), new("GET", "/pets/{name}", "A.ByName")];
+        var problems = RouteService.FindProblems(routes.Select(r => r with { MatchKey = "pets/{}" }));
+
+        return Verify(Write(output, new CheckResult("Api.csproj", routes, problems, null))).UseParameters(output);
+    }
+
     private static string Write(string output, string? project, IReadOnlyList<Route> routes, string? error)
     {
+        return Write(output, new CheckResult(project, routes, [], error));
+    }
+
+    private static string Write(string output, CheckResult result)
+    {
         using var writer = new StringWriter();
-        StructuredOutputService.Write(writer, output, project, routes, error);
+        StructuredOutputService.Write(writer, output, result);
         return writer.ToString();
     }
 }

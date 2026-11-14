@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Routing;
@@ -65,7 +66,50 @@ internal sealed class EndpointsServer(IServiceProvider services, string endpoint
             endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods.ToList() ?? [],
             GetPattern(endpoint),
             // The display name of e.g. SignalR hubs or health checks is the best there is
-            GetHandler(endpoint) ?? endpoint.DisplayName);
+            GetHandler(endpoint) ?? endpoint.DisplayName,
+            GetMatchKey(endpoint));
+    }
+
+    // Parameter names and defaults don't matter for matching: "pets/{id}" and "pets/{name}"
+    // match the same requests, a parameter with a default is optional. Constraints,
+    // the order, hosts and content types do matter.
+    private static string GetMatchKey(RouteEndpoint endpoint)
+    {
+        var pattern = endpoint.RoutePattern;
+        var path = string.Join('/', pattern.PathSegments.Select(segment => string.Concat(segment.Parts.Select(part => part switch
+        {
+            RoutePatternLiteralPart literal => literal.Content.ToLowerInvariant(),
+            RoutePatternSeparatorPart separator => separator.Content,
+            RoutePatternParameterPart parameter when pattern.RequiredValues.GetValueOrDefault(parameter.Name) is string { Length: > 0 } value => value.ToLowerInvariant(),
+            RoutePatternParameterPart parameter => FormatMatchedParameter(parameter, pattern),
+            _ => "",
+        }))));
+
+        var hosts = endpoint.Metadata.GetMetadata<IHostMetadata>()?.Hosts ?? [];
+        var contentTypes = endpoint.Metadata.GetMetadata<IAcceptsMetadata>()?.ContentTypes ?? [];
+
+        return $"{path} order={endpoint.Order} hosts={JoinSorted(hosts)} accepts={JoinSorted(contentTypes)}";
+    }
+
+    private static string FormatMatchedParameter(RoutePatternParameterPart parameter, RoutePattern pattern)
+    {
+        // Constraints can also be given outside the template, e.g. in MapControllerRoute
+        var policies = parameter.ParameterPolicies
+            .Concat(pattern.ParameterPolicies.GetValueOrDefault(parameter.Name) ?? [])
+            .Select(p => p.Content ?? p.ParameterPolicy?.GetType().Name)
+            .Where(p => p is not null)
+            // The pattern's policies include the inline ones
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase);
+        var catchAll = parameter.IsCatchAll ? "*" : "";
+        var optional = parameter.IsOptional || parameter.Default is not null || pattern.Defaults.ContainsKey(parameter.Name) ? "?" : "";
+
+        return $"{{{catchAll}{string.Concat(policies.Select(p => ":" + p))}{optional}}}";
+    }
+
+    private static string JoinSorted(IEnumerable<string> values)
+    {
+        return string.Join(',', values.Select(v => v.ToLowerInvariant()).Order(StringComparer.Ordinal));
     }
 
     // The raw text of a conventional route is the template all its actions share, e.g.

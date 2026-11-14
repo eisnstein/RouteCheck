@@ -15,6 +15,15 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/pets", () => Array.Empty<string>());
 app.MapPost("/pets", (string name) => name);
 app.MapDelete("/pets/{id}", (int id) => id);
+
+// Ambiguous: routing can't choose between them, unlike between the two below.
+// The analyzer only sees this as both are mapped here, not e.g. in different files.
+#pragma warning disable ASP0022
+app.MapGet("/pets/{id}", (int id) => id);
+app.MapGet("/pets/{name}", (string name) => name);
+#pragma warning restore ASP0022
+app.MapGet("/owners/{id:int}", (int id) => id);
+app.MapGet("/owners/{name}", (string name) => name);
 app.MapMethods("/pets/{id}", ["PUT", "PATCH"], (int id) => id);
 
 // Setting the address needs the server's IServerAddressesFeature

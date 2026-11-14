@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+using RouteCheck.Commands;
+
 namespace RouteCheck.Tests.Commands;
 
 public class CheckCommandTests
@@ -48,12 +50,35 @@ public class CheckCommandTests
         [
             // Only mapped in Development
             "GET /dev/info Program (lambda)",
+            "GET /owners/{id:int} Program (lambda)",
+            "GET /owners/{name} Program (lambda)",
             "GET /pets Program (lambda)",
             "POST /pets Program (lambda)",
+            "GET /pets/{id} Program (lambda)",
             "PUT /pets/{id} Program (lambda)",
             "PATCH /pets/{id} Program (lambda)",
             "DELETE /pets/{id} Program (lambda)",
+            "GET /pets/{name} Program (lambda)",
         ], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [NotInParallel(SampleApi)]
+    [Arguments(false, 0)]
+    [Arguments(true, CheckCommand.ProblemsExitCode)]
+    public async Task Reports_AmbiguousRoutes_And_FailsWithStrict(bool strict, int exitCode)
+    {
+        var app = TestHelper.CreateCommandAppTester();
+
+        string[] strictArgument = strict ? ["--strict"] : [];
+        var result = await app.RunAsync(["check", "--path", TestHelper.GetFixturePath(SampleApi), "--timeout", "60", "--output", "json", .. strictArgument]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(exitCode).Because(result.Output);
+        using var document = JsonDocument.Parse(result.Output);
+        var problems = document.RootElement.GetProperty("problems").EnumerateArray().ToList();
+        await Assert.That(problems).Count().IsEqualTo(1);
+        var paths = problems[0].GetProperty("routes").EnumerateArray().Select(r => r.GetProperty("path").GetString()!).ToList();
+        await Assert.That(paths).IsEquivalentTo(["/pets/{id}", "/pets/{name}"], TUnit.Assertions.Enums.CollectionOrdering.Any);
     }
 
     [Test]
@@ -138,7 +163,7 @@ public class CheckCommandTests
     {
         var routes = await RunJson(SampleApi, "-m", "get,post", "-f", "pets");
 
-        await Assert.That(routes).IsEquivalentTo(["GET /pets Program (lambda)", "POST /pets Program (lambda)"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        await Assert.That(routes).IsEquivalentTo(["GET /pets Program (lambda)", "POST /pets Program (lambda)", "GET /pets/{id} Program (lambda)", "GET /pets/{name} Program (lambda)"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     [Test]

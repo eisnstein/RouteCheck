@@ -96,6 +96,16 @@ routecheck -f "/pets*"
 
 Matching is case-insensitive, like ASP.NET Core routing. `method` and `filter` can be combined. Routes accepting any method (`ANY`) are shown for every `method`.
 
+### Problems
+
+Below the routes, RouteCheck lists problems with them. For now, these are ambiguous routes: routes with the same method that match the same requests, e.g. `GET /pets/{id}` and `GET /pets/{name}`. ASP.NET Core can't choose between them, so requesting them fails with an `AmbiguousMatchException`, but only at runtime. Routes whose parameters have different constraints (`/pets/{id:int}`), hosts, accepted content types or orders don't clash.
+
+To fail a CI job on problems, use `--strict`. The exit code is then `2` if there are problems, while errors still exit with `1`:
+
+```sh
+routecheck --strict
+```
+
 ### Output for scripts and LLM agents
 
 With `--output json` or `--output markdown`, RouteCheck prints only the result, as one document: no status lines and no update notice.
@@ -115,12 +125,14 @@ routecheck --output json
       "handler": "PetsController.List"
     }
   ],
+  "problems": [],
   "error": null
 }
 ```
 
 - `project` is the project file relative to the current directory.
 - `handler` is `null` if RouteCheck can't tell what handles the route.
+- `problems` lists the [problems](#problems), each with a `type` (e.g. `ambiguous-routes`), a `message` and its `routes`.
 - On an error, `error` contains the message and the exit code is `1`. Otherwise `error` is `null` and the exit code is `0`.
 - `--output markdown` prints the same as a Markdown table, e.g. for pull request comments or job summaries.
 

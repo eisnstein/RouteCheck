@@ -1,0 +1,35 @@
+﻿{
+  "command": "check",
+  "project": "Api.csproj",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/pets/{id}",
+      "handler": "A.ById"
+    },
+    {
+      "method": "GET",
+      "path": "/pets/{name}",
+      "handler": "A.ByName"
+    }
+  ],
+  "problems": [
+    {
+      "type": "ambiguous-routes",
+      "message": "GET /pets/{id} (A.ById) and GET /pets/{name} (A.ByName) match the same requests, so requesting them fails with an AmbiguousMatchException. Use different paths or route constraints, e.g. {id:int}.",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/pets/{id}",
+          "handler": "A.ById"
+        },
+        {
+          "method": "GET",
+          "path": "/pets/{name}",
+          "handler": "A.ByName"
+        }
+      ]
+    }
+  ],
+  "error": null
+}

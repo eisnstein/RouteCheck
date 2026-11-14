@@ -14,6 +14,11 @@ namespace RouteCheck.Commands;
 /// </summary>
 public class CheckCommand : AsyncCommand<CheckSettings>
 {
+    /// <summary>
+    /// The exit code with --strict when there are problems with the routes. Errors exit with 1.
+    /// </summary>
+    public const int ProblemsExitCode = 2;
+
     private readonly IAnsiConsole _console;
     private readonly INuGetApiService _nuGetApiService;
 
@@ -57,18 +62,20 @@ public class CheckCommand : AsyncCommand<CheckSettings>
 
             var endpoints = await WebAppService.ReadEndpoints(projectFile, settings.Framework, TimeSpan.FromSeconds(settings.Timeout), cancellationToken);
             var routes = RouteService.Filter(RouteService.GetRoutes(endpoints), settings.GetMethods(), settings.Filter ?? []);
+            var problems = RouteService.FindProblems(routes);
 
             if (isStructuredOutput)
             {
-                StructuredOutputService.Write(_console.Profile.Out.Writer, settings.Output, project, routes, null);
+                StructuredOutputService.Write(_console.Profile.Out.Writer, settings.Output, new CheckResult(project, routes, problems, null));
             }
             else
             {
                 _console.WriteLine();
                 OutputService.DisplayRoutes(_console, routes);
+                OutputService.DisplayProblems(_console, problems);
             }
 
-            return 0;
+            return settings.Strict && problems.Count > 0 ? ProblemsExitCode : 0;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -93,7 +100,7 @@ public class CheckCommand : AsyncCommand<CheckSettings>
         {
             if (isStructuredOutput)
             {
-                StructuredOutputService.Write(_console.Profile.Out.Writer, settings.Output, project, [], error);
+                StructuredOutputService.Write(_console.Profile.Out.Writer, settings.Output, CheckResult.Failed(project, error));
             }
             else
             {

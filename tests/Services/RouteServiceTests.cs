@@ -72,6 +72,40 @@ public class RouteServiceTests
     }
 
     [Test]
+    public async Task FindProblems_Reports_RoutesWithTheSameMethodAndMatchKey()
+    {
+        var routes = RouteService.GetRoutes(
+        [
+            new(["GET", "DELETE"], "/pets/{id}", "A.ById", "pets/{}"),
+            new(["GET"], "/pets/{name}", "A.ByName", "pets/{}"),
+            // Different constraint, method or no match key: no clash
+            new(["GET"], "/pets/{id:int}", "A.ByInt", "pets/{:int}"),
+            new(["POST"], "/pets/{name}", "A.Create", "pets/{}"),
+            new(["GET"], "/legacy", null),
+            new(["GET"], "/legacy", "B.Legacy"),
+        ]);
+
+        var problems = RouteService.FindProblems(routes);
+
+        await Assert.That(problems).Count().IsEqualTo(1);
+        await Assert.That(problems[0].Type).IsEqualTo(RouteService.AmbiguousProblem);
+        await Assert.That(problems[0].Routes.Select(r => r.Handler!)).IsEquivalentTo(["A.ById", "A.ByName"]);
+        await Assert.That(problems[0].Message).StartsWith("GET /pets/{id} (A.ById) and GET /pets/{name} (A.ByName) match the same requests");
+    }
+
+    [Test]
+    public async Task FindProblems_Reports_RoutesForAnyMethod_OnlyAmongThemselves()
+    {
+        var problems = RouteService.FindProblems(
+        [
+            new("ANY", "/Home/Index/{id?}", "HomeController.Index", "home/index/{?}"),
+            new("GET", "/Home/Index/{id?}", "HomeController.IndexGet", "home/index/{?}"),
+        ]);
+
+        await Assert.That(problems).IsEmpty();
+    }
+
+    [Test]
     public async Task Filter_Returns_AllRoutes_Without_MethodsAndPatterns()
     {
         await Assert.That(RouteService.Filter(Routes, [], [])).IsEquivalentTo(Routes);

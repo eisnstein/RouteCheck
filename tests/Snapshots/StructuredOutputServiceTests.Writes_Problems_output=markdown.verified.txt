@@ -1,0 +1,10 @@
+﻿## `Api.csproj`
+
+| Method | Path | Handler |
+|---|---|---|
+| GET | `/pets/{id}` | A.ById |
+| GET | `/pets/{name}` | A.ByName |
+
+### Problems
+
+- GET /pets/{id} (A.ById) and GET /pets/{name} (A.ByName) match the same requests, so requesting them fails with an AmbiguousMatchException. Use different paths or route constraints, e.g. {id:int}.

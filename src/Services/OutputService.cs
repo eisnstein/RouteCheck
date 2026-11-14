@@ -30,6 +30,22 @@ public static class OutputService
         console.Write(table);
     }
 
+    public static void DisplayProblems(IAnsiConsole console, IReadOnlyList<RouteProblem> problems)
+    {
+        if (problems.Count == 0)
+        {
+            return;
+        }
+
+        console.WriteLine();
+        console.MarkupLine(problems.Count == 1 ? "[yellow]1 problem:[/]" : $"[yellow]{problems.Count} problems:[/]");
+
+        foreach (var problem in problems)
+        {
+            console.MarkupLine($"[yellow]-[/] {Markup.Escape(problem.Message)}");
+        }
+    }
+
     private static string GetMethodColor(string method)
         => method switch
         {

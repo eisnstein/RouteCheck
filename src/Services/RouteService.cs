@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 using RouteCheck.StartupHook;
@@ -5,7 +6,16 @@ using RouteCheck.StartupHook;
 namespace RouteCheck.Services;
 
 /// <param name="Method">The HTTP method, or <see cref="RouteService.AnyMethod"/>.</param>
-public sealed record Route(string Method, string Path, string? Handler);
+/// <param name="MatchKey">See <see cref="EndpointRoute.MatchKey"/>. Not part of the documents.</param>
+public sealed record Route(string Method, string Path, string? Handler, [property: JsonIgnore] string? MatchKey = null);
+
+/// <summary>
+/// Something wrong with the routes, e.g. two routes routing can't choose between.
+/// </summary>
+/// <param name="Type">What kind of problem it is, e.g. <see cref="RouteService.AmbiguousProblem"/>.</param>
+/// <param name="Message">The problem, in plain text.</param>
+/// <param name="Routes">The routes with the problem.</param>
+public sealed record RouteProblem(string Type, string Message, IReadOnlyList<Route> Routes);
 
 public static class RouteService
 {
@@ -26,7 +36,7 @@ public static class RouteService
     {
         return endpoints
             .SelectMany(e => (e.Methods.Count == 0 ? [AnyMethod] : e.Methods)
-                .Select(method => new Route(method.ToUpperInvariant(), NormalizePath(e.Pattern), e.Handler)))
+                .Select(method => new Route(method.ToUpperInvariant(), NormalizePath(e.Pattern), e.Handler, e.MatchKey)))
             .Distinct()
             .OrderBy(r => r.Path, StringComparer.OrdinalIgnoreCase)
             .ThenBy(r => Array.IndexOf(Methods, r.Method) is var index and >= 0 ? index : int.MaxValue)
@@ -48,6 +58,32 @@ public static class RouteService
             .Where(r => matchers.Count == 0 || matchers.Any(matches => matches(r.Path)))
             .ToList();
     }
+
+    /// <summary>
+    /// Routes with the same method that match the same requests, e.g. "/pets/{id}" and
+    /// "/pets/{name}". Requesting them fails with an AmbiguousMatchException. Routes
+    /// with a method take precedence over routes accepting any method, so these don't clash.
+    /// </summary>
+    public static List<RouteProblem> FindProblems(IEnumerable<Route> routes)
+    {
+        return routes
+            .Where(r => r.MatchKey is not null)
+            .GroupBy(r => (r.Method, r.MatchKey))
+            .Where(group => group.Count() > 1)
+            .Select(group => group.ToList())
+            .Select(clashing => new RouteProblem(
+                AmbiguousProblem,
+                $"{string.Join(" and ", clashing.Select(Describe))} match the same requests, so requesting them fails with an AmbiguousMatchException. Use different paths or route constraints, e.g. {{id:int}}.",
+                clashing))
+            .ToList();
+
+        static string Describe(Route route) => route.Handler is null ? $"{route.Method} {route.Path}" : $"{route.Method} {route.Path} ({route.Handler})";
+    }
+
+    /// <summary>
+    /// The type of the problem of routes routing can't choose between.
+    /// </summary>
+    public const string AmbiguousProblem = "ambiguous-routes";
 
     // Controllers and Razor Pages have patterns without a leading slash, e.g. "api/orders"
     private static string NormalizePath(string pattern)

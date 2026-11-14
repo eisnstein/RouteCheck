@@ -37,6 +37,10 @@ public sealed class CheckSettings : CommandSettings
     [Description(@"Show only routes whose path contains the given text, or matches the given wildcard pattern (* or %) (can be used multiple times).")]
     public string[]? Filter { get; set; }
 
+    [CommandOption("--strict")]
+    [Description(@"Exit with code 2 if there are problems with the routes, e.g. ambiguous routes. For CI jobs.")]
+    public bool Strict { get; set; }
+
     [CommandOption("--output <Output>")]
     [Description(@"Output of the routes: table (default), json or markdown. With json and markdown only the result is printed, e.g. for scripts and LLM agents.")]
     [DefaultValue(OutputFormat.Table)]

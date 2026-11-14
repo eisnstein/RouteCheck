@@ -1,6 +1,7 @@
-{
+﻿{
   "command": "check",
   "project": null,
   "routes": [],
+  "problems": [],
   "error": "No project file (*.csproj) found in 'src/Api'."
 }

@@ -6,6 +6,11 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 
 ## Unreleased
 
+### Enhancements
+
+- RouteCheck now reports ambiguous routes: routes with the same method that match the same requests, e.g. `GET /pets/{id}` and `GET /pets/{name}`, which fail at runtime with an `AmbiguousMatchException`. They are listed below the routes, and as `problems` in `--output json`/`markdown`.
+- New `--strict` option to exit with code `2` if there are problems with the routes, e.g. in CI jobs.
+
 ### Bug fixes
 
 - Hosted services of the web app, e.g. a `BackgroundService` consuming a queue or sending emails, are no longer started. Before, they ran and did their work while RouteCheck read the routes.

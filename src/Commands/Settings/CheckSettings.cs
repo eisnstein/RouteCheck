@@ -41,8 +41,12 @@ public sealed class CheckSettings : CommandSettings
     [Description(@"Show only routes anyone may request, without signing in.")]
     public bool Anonymous { get; set; }
 
+    [CommandOption("--baseline <File>")]
+    [Description(@"Compare the routes with a file written earlier with --output json, and show the added, removed and changed routes.")]
+    public string? Baseline { get; set; }
+
     [CommandOption("--strict")]
-    [Description(@"Exit with code 2 if there are problems with the routes, e.g. ambiguous routes. For CI jobs.")]
+    [Description(@"Exit with code 2 if there are problems with the routes, e.g. ambiguous routes, or routes of the --baseline were removed. For CI jobs.")]
     public bool Strict { get; set; }
 
     [CommandOption("--output <Output>")]

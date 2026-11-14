@@ -49,6 +49,9 @@ public class CheckCommand : AsyncCommand<CheckSettings>
             // With forward slashes, so the documents are the same on every OS
             project = Path.GetRelativePath(Directory.GetCurrentDirectory(), projectFile).Replace('\\', '/');
 
+            // Before the build, so a wrong file fails fast
+            var baselineRoutes = settings.Baseline is null ? null : BaselineService.Load(Path.Combine(Directory.GetCurrentDirectory(), settings.Baseline));
+
             if (settings.OpenApiEndpoint is not null)
             {
                 Status("[dim]INFO:[/] --openapi-endpoint is no longer needed and is ignored, as the routes are read from the app itself.");
@@ -64,18 +67,28 @@ public class CheckCommand : AsyncCommand<CheckSettings>
             var routes = RouteService.Filter(RouteService.GetRoutes(endpoints), settings.GetFilter());
             var problems = RouteService.FindProblems(routes);
 
+            // Filtered the same way, so e.g. --method only compares routes with these methods
+            var baseline = settings.Baseline is null
+                ? null
+                : BaselineService.Compare(settings.Baseline, RouteService.Filter(baselineRoutes!, settings.GetFilter()), routes);
+
             if (isStructuredOutput)
             {
-                StructuredOutputService.Write(_console.Profile.Out.Writer, settings.Output, new CheckResult(project, routes, problems, null));
+                StructuredOutputService.Write(_console.Profile.Out.Writer, settings.Output, new CheckResult(project, routes, problems, null, baseline));
             }
             else
             {
                 _console.WriteLine();
                 OutputService.DisplayRoutes(_console, routes);
                 OutputService.DisplayProblems(_console, problems);
+                if (baseline is not null)
+                {
+                    OutputService.DisplayBaseline(_console, baseline);
+                }
             }
 
-            return settings.Strict && problems.Count > 0 ? ProblemsExitCode : 0;
+            var failsStrict = problems.Count > 0 || baseline?.Removed.Count > 0;
+            return settings.Strict && failsStrict ? ProblemsExitCode : 0;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

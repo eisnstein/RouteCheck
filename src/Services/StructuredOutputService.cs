@@ -9,11 +9,13 @@ namespace RouteCheck.Services;
 /// <param name="Project">The project file relative to the current directory, if it was found.</param>
 /// <param name="Problems">What is wrong with the routes, e.g. ambiguous routes.</param>
 /// <param name="Error">The error (plain text) that ended the run, if any.</param>
+/// <param name="Baseline">How the routes differ from the baseline, with --baseline.</param>
 public sealed record CheckResult(
     string? Project,
     IReadOnlyList<Route> Routes,
     IReadOnlyList<RouteProblem> Problems,
-    string? Error)
+    string? Error,
+    BaselineDiff? Baseline = null)
 {
     public static CheckResult Failed(string? project, string error) => new(project, [], [], error);
 }
@@ -37,7 +39,10 @@ public static class StructuredOutputService
     {
         if (output == OutputFormat.Json)
         {
-            var document = new CheckDocument("check", result.Project, result.Routes, result.Problems, result.Error);
+            var baseline = result.Baseline is not { } diff
+                ? null
+                : new BaselineDocument(diff.File, diff.Added, diff.Removed, diff.Changed.Select(c => new ChangeDocument(c.Before, c.After, BaselineService.Describe(c))).ToList());
+            var document = new CheckDocument("check", result.Project, result.Routes, result.Problems, baseline, result.Error);
             writer.WriteLine(JsonSerializer.Serialize(document, JsonOptions));
             return;
         }
@@ -79,6 +84,22 @@ public static class StructuredOutputService
                 lines.Add("");
                 lines.AddRange(result.Problems.Select(p => $"- {p.Message}"));
             }
+
+            if (result.Baseline is { } diff)
+            {
+                lines.Add("");
+                lines.Add($"### Compared with `{diff.File}`");
+                lines.Add("");
+
+                if (!diff.HasChanges)
+                {
+                    lines.Add("No changes.");
+                }
+
+                lines.AddRange(diff.Added.Select(r => $"- **Added:** {r.Method} `{r.Path}`"));
+                lines.AddRange(diff.Removed.Select(r => $"- **Removed:** {r.Method} `{r.Path}`"));
+                lines.AddRange(diff.Changed.Select(c => $"- **Changed:** {c.After.Method} `{c.After.Path}`: {BaselineService.Describe(c)}"));
+            }
         }
         else
         {
@@ -98,5 +119,10 @@ public static class StructuredOutputService
         string? Project,
         IReadOnlyList<Route> Routes,
         IReadOnlyList<RouteProblem> Problems,
+        BaselineDocument? Baseline,
         string? Error);
+
+    private sealed record BaselineDocument(string File, IReadOnlyList<Route> Added, IReadOnlyList<Route> Removed, IReadOnlyList<ChangeDocument> Changed);
+
+    private sealed record ChangeDocument(Route Before, Route After, string Description);
 }

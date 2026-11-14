@@ -113,6 +113,19 @@ To fail a CI job on problems, use `--strict`. The exit code is then `2` if there
 routecheck --strict
 ```
 
+### Compare with a baseline
+
+To see how a change affects your routes, e.g. in a pull request, save the routes as a baseline and compare with it later:
+
+```sh
+routecheck --output json > routes.json
+
+# Later: shows the added, removed and changed routes (handler or auth)
+routecheck --baseline routes.json
+```
+
+Routes are compared by method and path. `method`, `filter` and the other filters apply to the baseline too. With `--strict`, the exit code is `2` if routes of the baseline were removed, as requesting them now fails. You can commit the baseline and update it together with your routes.
+
 ### Output for scripts and LLM agents
 
 With `--output json` or `--output markdown`, RouteCheck prints only the result, as one document: no status lines and no update notice.
@@ -141,6 +154,7 @@ routecheck --output json
 - `project` is the project file relative to the current directory.
 - `handler` is `null` if RouteCheck can't tell what handles the route.
 - `problems` lists the [problems](#problems), each with a `type` (e.g. `ambiguous-routes`), a `message` and its `routes`.
+- With `--baseline`, `baseline` contains the `added`, `removed` and `changed` routes (each change with `before`, `after` and a `description`). Otherwise it is `null`.
 - On an error, `error` contains the message and the exit code is `1`. Otherwise `error` is `null` and the exit code is `0`.
 - `--output markdown` prints the same as a Markdown table, e.g. for pull request comments or job summaries.
 

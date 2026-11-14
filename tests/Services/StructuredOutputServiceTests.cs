@@ -42,6 +42,16 @@ public class StructuredOutputServiceTests
         return Verify(Write(output, new CheckResult("Api.csproj", routes, problems, null))).UseParameters(output);
     }
 
+    [Test]
+    [Arguments(OutputFormat.Json)]
+    [Arguments(OutputFormat.Markdown)]
+    public Task Writes_Baseline(string output)
+    {
+        var diff = BaselineService.Compare("routes.json", [new("GET", "/pets", "PetsController.List", "Policy: Admin"), new("GET", "/cats", null, "Anonymous")], Routes);
+
+        return Verify(Write(output, new CheckResult("Api.csproj", Routes, [], null, diff))).UseParameters(output);
+    }
+
     private static string Write(string output, string? project, IReadOnlyList<Route> routes, string? error)
     {
         return Write(output, new CheckResult(project, routes, [], error));

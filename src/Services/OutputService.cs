@@ -70,6 +70,35 @@ public static class OutputService
         }
     }
 
+    public static void DisplayBaseline(IAnsiConsole console, BaselineDiff diff)
+    {
+        console.WriteLine();
+
+        var file = Markup.Escape(diff.File);
+        if (!diff.HasChanges)
+        {
+            console.MarkupLine($"[green]No changes[/] compared with [grey]{file}[/].");
+            return;
+        }
+
+        console.MarkupLine($"Compared with [grey]{file}[/]: [green]{diff.Added.Count} added[/], [red]{diff.Removed.Count} removed[/], [yellow]{diff.Changed.Count} changed[/]");
+
+        foreach (var route in diff.Added)
+        {
+            console.MarkupLine($"[green]+[/] {route.Method} {Markup.Escape(route.Path)}");
+        }
+
+        foreach (var route in diff.Removed)
+        {
+            console.MarkupLine($"[red]-[/] {route.Method} {Markup.Escape(route.Path)}");
+        }
+
+        foreach (var change in diff.Changed)
+        {
+            console.MarkupLine($"[yellow]~[/] {change.After.Method} {Markup.Escape(change.After.Path)} [grey]{Markup.Escape(BaselineService.Describe(change))}[/]");
+        }
+    }
+
     private static string GetMethodColor(string method)
         => method switch
         {

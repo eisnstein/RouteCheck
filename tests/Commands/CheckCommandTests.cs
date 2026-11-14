@@ -230,6 +230,32 @@ public class CheckCommandTests
         ], TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
+    [Test]
+    [NotInParallel(SampleApi)]
+    public async Task Compares_Routes_WithTheBaseline_And_FailsWithStrict_When_RoutesWereRemoved()
+    {
+        using var dir = TestHelper.CreateTempDirectory();
+        var baseline = Path.Combine(dir.Path, "routes.json");
+        File.WriteAllText(baseline, """
+            {
+              "routes": [
+                { "method": "GET", "path": "/pets", "handler": "Program (lambda)", "auth": "Policy: Admin" },
+                { "method": "GET", "path": "/cats", "handler": "Program (lambda)", "auth": "Anonymous" }
+              ]
+            }
+            """);
+        var app = TestHelper.CreateCommandAppTester();
+
+        var result = await app.RunAsync(["check", "--path", TestHelper.GetFixturePath(SampleApi), "--timeout", "60", "--output", "json", "-f", "/pets", "-f", "/cats", "--baseline", baseline, "--strict"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(CheckCommand.ProblemsExitCode).Because(result.Output);
+        using var document = JsonDocument.Parse(result.Output);
+        var diff = document.RootElement.GetProperty("baseline");
+        await Assert.That(diff.GetProperty("removed").EnumerateArray().Select(r => r.GetProperty("path").GetString()!)).IsEquivalentTo(["/cats"]);
+        await Assert.That(diff.GetProperty("changed").EnumerateArray().Select(c => c.GetProperty("description").GetString()!)).IsEquivalentTo(["Auth: Policy: Admin → Anonymous"]);
+        await Assert.That(diff.GetProperty("added").GetArrayLength()).IsGreaterThan(0);
+    }
+
     // "METHOD /path Handler"
     private static string Handler(JsonElement route) => $"{route.GetProperty("method").GetString()} {route.GetProperty("path").GetString()} {route.GetProperty("handler").GetString()}";
 

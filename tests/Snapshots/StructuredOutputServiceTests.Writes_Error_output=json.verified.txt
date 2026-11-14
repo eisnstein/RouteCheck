@@ -3,5 +3,6 @@
   "project": null,
   "routes": [],
   "problems": [],
+  "baseline": null,
   "error": "No project file (*.csproj) found in 'src/Api'."
 }

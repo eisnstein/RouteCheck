@@ -1,0 +1,12 @@
+﻿## `Api.csproj`
+
+| Method | Path | Handler | Auth |
+|---|---|---|---|
+| GET | `/pets` | PetsController.List | Anonymous |
+| DELETE | `/pets/{id}` |  | Policy: Admin |
+
+### Compared with `routes.json`
+
+- **Added:** DELETE `/pets/{id}`
+- **Removed:** GET `/cats`
+- **Changed:** GET `/pets`: Auth: Policy: Admin → Anonymous

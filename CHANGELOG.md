@@ -12,6 +12,7 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 - New `--strict` option to exit with code `2` if there are problems with the routes, e.g. in CI jobs.
 - New Auth column (and `auth` in `--output json`/`markdown`): who may request the route, e.g. `Anonymous`, `Authenticated`, `Policy: Admin` or `Roles: admin, editor`. It includes the fallback policy and global MVC `AuthorizeFilter`s, and is left out if anyone may request every route.
 - New `--anonymous` option to show only the routes anyone may request.
+- New `--baseline` option to compare the routes with a document written earlier with `--output json`, showing the added, removed and changed routes. With `--strict`, removed routes exit with code `2`.
 
 ### Bug fixes
 

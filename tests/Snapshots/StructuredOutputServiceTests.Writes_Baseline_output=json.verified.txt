@@ -1,0 +1,56 @@
+﻿{
+  "command": "check",
+  "project": "Api.csproj",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/pets",
+      "handler": "PetsController.List",
+      "auth": "Anonymous"
+    },
+    {
+      "method": "DELETE",
+      "path": "/pets/{id}",
+      "handler": null,
+      "auth": "Policy: Admin"
+    }
+  ],
+  "problems": [],
+  "baseline": {
+    "file": "routes.json",
+    "added": [
+      {
+        "method": "DELETE",
+        "path": "/pets/{id}",
+        "handler": null,
+        "auth": "Policy: Admin"
+      }
+    ],
+    "removed": [
+      {
+        "method": "GET",
+        "path": "/cats",
+        "handler": null,
+        "auth": "Anonymous"
+      }
+    ],
+    "changed": [
+      {
+        "before": {
+          "method": "GET",
+          "path": "/pets",
+          "handler": "PetsController.List",
+          "auth": "Policy: Admin"
+        },
+        "after": {
+          "method": "GET",
+          "path": "/pets",
+          "handler": "PetsController.List",
+          "auth": "Anonymous"
+        },
+        "description": "Auth: Policy: Admin → Anonymous"
+      }
+    ]
+  },
+  "error": null
+}

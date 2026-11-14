@@ -5,12 +5,14 @@
     {
       "method": "GET",
       "path": "/pets/{id}",
-      "handler": "A.ById"
+      "handler": "A.ById",
+      "auth": null
     },
     {
       "method": "GET",
       "path": "/pets/{name}",
-      "handler": "A.ByName"
+      "handler": "A.ByName",
+      "auth": null
     }
   ],
   "problems": [
@@ -21,12 +23,14 @@
         {
           "method": "GET",
           "path": "/pets/{id}",
-          "handler": "A.ById"
+          "handler": "A.ById",
+          "auth": null
         },
         {
           "method": "GET",
           "path": "/pets/{name}",
-          "handler": "A.ByName"
+          "handler": "A.ByName",
+          "auth": null
         }
       ]
     }

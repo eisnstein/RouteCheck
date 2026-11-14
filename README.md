@@ -36,17 +36,18 @@ routecheck
 This should give you something like this:
 
 ```
-Method Path                     Handler
-ANY    /                        Page /Index
-GET    /api/orders              OrdersController.List
-GET    /api/orders/{id:int}     OrdersController.Get
-PUT    /api/orders/{id:int}     OrdersController.Update
-GET    /health                  Health.Check
-ANY    /Orders/Details/{id:int} Page /Orders/Details
-GET    /pets                    Program (lambda)
+Method Path                     Handler                 Auth
+ANY    /                        Page /Index             Anonymous
+GET    /api/orders              OrdersController.List   Authenticated
+GET    /api/orders/{id:int}     OrdersController.Get    Authenticated
+PUT    /api/orders/{id:int}     OrdersController.Update Roles: admin, editor
+GET    /health                  Health.Check            Anonymous
+ANY    /Orders/Details/{id:int} Page /Orders/Details    Policy: Customer
+GET    /pets                    Program (lambda)        Authenticated (fallback)
 ```
 
 - `ANY` means the route accepts every HTTP method, like Razor Pages do.
+- Auth shows who may request the route: `Anonymous` (anyone), or what is required, e.g. `Authenticated`, `Policy: Customer`, `Roles: admin, editor` or `Claim: scope=pets:write`. `(fallback)` means the route has no authorization of its own, so the fallback policy applies. Global MVC filters (`AuthorizeFilter`) are included. The column is left out if anyone may request every route. Note that authorization is only enforced if your app calls `UseAuthorization()`.
 - For minimal APIs, the handler is the method passed to `MapGet` etc. A lambda is shown as `(lambda)` with the class it is declared in.
 - Controllers with conventional routes (`MapControllerRoute`) are shown with one row per action and their controller and action filled in, e.g. `/Home/About/{id?}`. Shorter URLs from route defaults, like `/` for `HomeController.Index`, are not listed separately.
 
@@ -96,6 +97,12 @@ routecheck -f "/pets*"
 
 Matching is case-insensitive, like ASP.NET Core routing. `method` and `filter` can be combined. Routes accepting any method (`ANY`) are shown for every `method`.
 
+To review which routes are public, show only the routes anyone may request with `--anonymous`:
+
+```sh
+routecheck --anonymous
+```
+
 ### Problems
 
 Below the routes, RouteCheck lists problems with them. For now, these are ambiguous routes: routes with the same method that match the same requests, e.g. `GET /pets/{id}` and `GET /pets/{name}`. ASP.NET Core can't choose between them, so requesting them fails with an `AmbiguousMatchException`, but only at runtime. Routes whose parameters have different constraints (`/pets/{id:int}`), hosts, accepted content types or orders don't clash.
@@ -122,7 +129,8 @@ routecheck --output json
     {
       "method": "GET",
       "path": "/pets",
-      "handler": "PetsController.List"
+      "handler": "PetsController.List",
+      "auth": "Anonymous"
     }
   ],
   "problems": [],

@@ -25,19 +25,23 @@ internal sealed class EndpointsServer(IServiceProvider services, string endpoint
 {
     public IFeatureCollection Features { get; } = CreateFeatures();
 
-    public Task StartAsync<TContext>(IHttpApplication<TContext> application, CancellationToken cancellationToken)
+    public async Task StartAsync<TContext>(IHttpApplication<TContext> application, CancellationToken cancellationToken)
         where TContext : notnull
     {
         var endpoints = services.GetService<EndpointDataSource>()?.Endpoints ?? [];
-        var routes = endpoints.OfType<RouteEndpoint>().Where(CanReceiveRequests).Select(ToRoute).ToList();
+        var auth = new AuthDescriber(services);
+        var routes = new List<EndpointRoute>();
 
-        File.WriteAllText(endpointsFile, JsonSerializer.Serialize(routes, EndpointsContract.JsonOptions));
+        foreach (var endpoint in endpoints.OfType<RouteEndpoint>().Where(CanReceiveRequests))
+        {
+            routes.Add(ToRoute(endpoint) with { Auth = await auth.DescribeAsync(endpoint) });
+        }
+
+        await File.WriteAllTextAsync(endpointsFile, JsonSerializer.Serialize(routes, EndpointsContract.JsonOptions), cancellationToken);
 
         // Stopping gracefully instead of throwing, as apps often report a failed
         // startup, e.g. to their error tracking
         services.GetRequiredService<IHostApplicationLifetime>().StopApplication();
-
-        return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

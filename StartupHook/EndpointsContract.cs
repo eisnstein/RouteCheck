@@ -13,6 +13,11 @@ public static class EndpointsContract
     /// </summary>
     public const string EndpointsFileVariable = "ROUTECHECK_ENDPOINTS_FILE";
 
+    /// <summary>
+    /// The auth of endpoints anyone may request, without signing in.
+    /// </summary>
+    public const string Anonymous = "Anonymous";
+
     public static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 }
 
@@ -24,4 +29,5 @@ public static class EndpointsContract
 /// names, the order, hosts and accepted content types. Endpoints with the same match key
 /// and method match the same requests, so routing can't choose between them.
 /// </param>
-public sealed record EndpointRoute(IReadOnlyList<string> Methods, string Pattern, string? Handler, string? MatchKey = null);
+/// <param name="Auth">Who may request it: "Anonymous", or what is required, e.g. "Policy: Admin" or "Roles: Admin, Editor".</param>
+public sealed record EndpointRoute(IReadOnlyList<string> Methods, string Pattern, string? Handler, string? MatchKey = null, string? Auth = null);

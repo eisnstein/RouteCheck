@@ -58,9 +58,18 @@ public static class StructuredOutputService
             }
             else
             {
-                lines.Add("| Method | Path | Handler |");
-                lines.Add("|---|---|---|");
-                lines.AddRange(result.Routes.Select(r => $"| {r.Method} | `{Escape(r.Path)}` | {Escape(r.Handler ?? "")} |"));
+                if (OutputService.ShowAuth(result.Routes))
+                {
+                    lines.Add("| Method | Path | Handler | Auth |");
+                    lines.Add("|---|---|---|---|");
+                    lines.AddRange(result.Routes.Select(r => $"| {r.Method} | `{Escape(r.Path)}` | {Escape(r.Handler ?? "")} | {Escape(r.Auth ?? "")} |"));
+                }
+                else
+                {
+                    lines.Add("| Method | Path | Handler |");
+                    lines.Add("|---|---|---|");
+                    lines.AddRange(result.Routes.Select(r => $"| {r.Method} | `{Escape(r.Path)}` | {Escape(r.Handler ?? "")} |"));
+                }
             }
 
             if (result.Problems.Count > 0)

@@ -6,8 +6,27 @@ using RouteCheck.StartupHook;
 namespace RouteCheck.Services;
 
 /// <param name="Method">The HTTP method, or <see cref="RouteService.AnyMethod"/>.</param>
+/// <param name="Auth">See <see cref="EndpointRoute.Auth"/>, <c>null</c> if unknown.</param>
 /// <param name="MatchKey">See <see cref="EndpointRoute.MatchKey"/>. Not part of the documents.</param>
-public sealed record Route(string Method, string Path, string? Handler, [property: JsonIgnore] string? MatchKey = null);
+public sealed record Route(string Method, string Path, string? Handler, string? Auth = null, [property: JsonIgnore] string? MatchKey = null)
+{
+    /// <summary>
+    /// Whether anyone may request the route, without signing in.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsAnonymous => Auth == RouteService.Anonymous;
+}
+
+/// <summary>
+/// Which routes to show. Empty lists don't filter.
+/// </summary>
+/// <param name="Methods">The HTTP methods, uppercase. Routes accepting any method match every method.</param>
+/// <param name="Paths">Texts the path contains, or wildcard patterns it matches.</param>
+/// <param name="AnonymousOnly">Only routes anyone may request.</param>
+public sealed record RouteFilter(IReadOnlyCollection<string> Methods, IReadOnlyCollection<string> Paths, bool AnonymousOnly = false)
+{
+    public static readonly RouteFilter None = new([], []);
+}
 
 /// <summary>
 /// Something wrong with the routes, e.g. two routes routing can't choose between.
@@ -36,7 +55,7 @@ public static class RouteService
     {
         return endpoints
             .SelectMany(e => (e.Methods.Count == 0 ? [AnyMethod] : e.Methods)
-                .Select(method => new Route(method.ToUpperInvariant(), NormalizePath(e.Pattern), e.Handler, e.MatchKey)))
+                .Select(method => new Route(method.ToUpperInvariant(), NormalizePath(e.Pattern), e.Handler, e.Auth, e.MatchKey)))
             .Distinct()
             .OrderBy(r => r.Path, StringComparer.OrdinalIgnoreCase)
             .ThenBy(r => Array.IndexOf(Methods, r.Method) is var index and >= 0 ? index : int.MaxValue)
@@ -45,17 +64,23 @@ public static class RouteService
     }
 
     /// <summary>
+    /// What the startup hook reports for routes anyone may request.
+    /// </summary>
+    public const string Anonymous = EndpointsContract.Anonymous;
+
+    /// <summary>
     /// Keeps the routes with one of the methods (if any are given) and whose path
     /// matches one of the patterns (if any are given). Routes accepting any method
     /// match every method.
     /// </summary>
-    public static List<Route> Filter(IEnumerable<Route> routes, IReadOnlyCollection<string> methods, IReadOnlyCollection<string> patterns)
+    public static List<Route> Filter(IEnumerable<Route> routes, RouteFilter filter)
     {
-        var matchers = patterns.Select(CreatePathMatcher).ToList();
+        var pathMatchers = filter.Paths.Select(CreateMatcher).ToList();
 
         return routes
-            .Where(r => methods.Count == 0 || r.Method == AnyMethod || methods.Contains(r.Method, StringComparer.OrdinalIgnoreCase))
-            .Where(r => matchers.Count == 0 || matchers.Any(matches => matches(r.Path)))
+            .Where(r => filter.Methods.Count == 0 || r.Method == AnyMethod || filter.Methods.Contains(r.Method, StringComparer.OrdinalIgnoreCase))
+            .Where(r => pathMatchers.Count == 0 || pathMatchers.Any(matches => matches(r.Path)))
+            .Where(r => !filter.AnonymousOnly || r.IsAnonymous)
             .ToList();
     }
 
@@ -94,7 +119,7 @@ public static class RouteService
     // ASP.NET Core routing is case-insensitive, so matching is too.
     // Without a wildcard, the text can be anywhere in the path. With a wildcard
     // (* or %, like in PackCheck), the pattern has to match the whole path.
-    private static Func<string, bool> CreatePathMatcher(string pattern)
+    private static Func<string, bool> CreateMatcher(string pattern)
     {
         if (!pattern.Contains('*') && !pattern.Contains('%'))
         {

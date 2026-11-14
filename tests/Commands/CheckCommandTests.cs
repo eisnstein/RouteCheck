@@ -180,10 +180,71 @@ public class CheckCommandTests
         await Assert.That(result.Output).Contains("Program (lambda)");
     }
 
+    [Test]
+    [NotInParallel(SampleApi)]
+    public async Task Lists_Auth_OfMinimalApis_WithFallbackPolicy()
+    {
+        var routes = await RunJson(SampleApi, Auth);
+
+        await Assert.That(routes).IsEquivalentTo(
+        [
+            "GET /dev/info Authenticated (fallback)",
+            "GET /owners/{id:int} Authenticated (fallback)",
+            "GET /owners/{name} Authenticated (fallback)",
+            "GET /pets Anonymous",
+            "POST /pets Claim: scope=pets:write",
+            "GET /pets/{id} Authenticated (fallback)",
+            "PUT /pets/{id} Authenticated (fallback)",
+            "PATCH /pets/{id} Authenticated (fallback)",
+            "DELETE /pets/{id} Policy: Admin",
+            "GET /pets/{name} Authenticated (fallback)",
+        ], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+    }
+
+    [Test]
+    [NotInParallel(SampleApi)]
+    public async Task Writes_OnlyAnonymousRoutes()
+    {
+        var routes = await RunJson(SampleApi, Auth, "--anonymous");
+
+        await Assert.That(routes).IsEquivalentTo(["GET /pets Anonymous"]);
+    }
+
+    [Test]
+    [NotInParallel(MvcApp)]
+    public async Task Lists_Auth_OfControllers_And_RazorPages_WithGlobalAuthorizeFilter()
+    {
+        var routes = await RunJson(MvcApp, Auth);
+
+        await Assert.That(routes).IsEquivalentTo(
+        [
+            "ANY / Authenticated",
+            "GET /api/orders Anonymous",
+            "GET /api/orders/{id:int} Authenticated",
+            "PUT /api/orders/{id:int} Roles: admin, editor",
+            "PATCH /api/orders/{id:int} Roles: admin, editor",
+            // MVC filters don't apply to minimal APIs
+            "GET /health Anonymous",
+            "ANY /Index Authenticated",
+            "ANY /Orders/Details/{id:int} Authenticated",
+        ], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+    }
+
+    // "METHOD /path Handler"
+    private static string Handler(JsonElement route) => $"{route.GetProperty("method").GetString()} {route.GetProperty("path").GetString()} {route.GetProperty("handler").GetString()}";
+
+    // "METHOD /path Auth"
+    private static string Auth(JsonElement route) => $"{route.GetProperty("method").GetString()} {route.GetProperty("path").GetString()} {route.GetProperty("auth").GetString()}";
+
     /// <summary>
     /// Runs the check with --output json and returns the routes as "METHOD /path Handler".
     /// </summary>
-    private static async Task<List<string>> RunJson(string fixture, params string[] arguments)
+    private static Task<List<string>> RunJson(string fixture, params string[] arguments) => RunJson(fixture, Handler, arguments);
+
+    /// <summary>
+    /// Runs the check with --output json and returns the routes formatted with the given function.
+    /// </summary>
+    private static async Task<List<string>> RunJson(string fixture, Func<JsonElement, string> format, params string[] arguments)
     {
         var app = TestHelper.CreateCommandAppTester();
 
@@ -195,8 +256,6 @@ public class CheckCommandTests
         using var document = JsonDocument.Parse(result.Output);
         await Assert.That(document.RootElement.GetProperty("error").ValueKind).IsEqualTo(JsonValueKind.Null);
 
-        return document.RootElement.GetProperty("routes").EnumerateArray()
-            .Select(r => $"{r.GetProperty("method").GetString()} {r.GetProperty("path").GetString()} {r.GetProperty("handler").GetString()}")
-            .ToList();
+        return document.RootElement.GetProperty("routes").EnumerateArray().Select(format).ToList();
     }
 }

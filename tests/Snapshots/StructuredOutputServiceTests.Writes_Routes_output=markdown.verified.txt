@@ -1,6 +1,6 @@
 ﻿## `src/Api/Api.csproj`
 
-| Method | Path | Handler |
-|---|---|---|
-| GET | `/pets` | PetsController.List |
-| DELETE | `/pets/{id}` |  |
+| Method | Path | Handler | Auth |
+|---|---|---|---|
+| GET | `/pets` | PetsController.List | Anonymous |
+| DELETE | `/pets/{id}` |  | Policy: Admin |

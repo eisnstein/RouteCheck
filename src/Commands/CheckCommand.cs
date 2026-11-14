@@ -61,7 +61,7 @@ public class CheckCommand : AsyncCommand<CheckSettings>
             Status("Starting web application to read its routes...");
 
             var endpoints = await WebAppService.ReadEndpoints(projectFile, settings.Framework, TimeSpan.FromSeconds(settings.Timeout), cancellationToken);
-            var routes = RouteService.Filter(RouteService.GetRoutes(endpoints), settings.GetMethods(), settings.Filter ?? []);
+            var routes = RouteService.Filter(RouteService.GetRoutes(endpoints), settings.GetFilter());
             var problems = RouteService.FindProblems(routes);
 
             if (isStructuredOutput)

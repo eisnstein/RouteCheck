@@ -1,0 +1,3 @@
+﻿Method Path       Handler          Auth         
+GET    /pets      Program (lambda) Anonymous    
+DELETE /pets/{id} Program (lambda) Policy: Admin

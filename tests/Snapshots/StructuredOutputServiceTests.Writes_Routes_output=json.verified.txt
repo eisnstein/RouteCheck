@@ -5,12 +5,14 @@
     {
       "method": "GET",
       "path": "/pets",
-      "handler": "PetsController.List"
+      "handler": "PetsController.List",
+      "auth": "Anonymous"
     },
     {
       "method": "DELETE",
       "path": "/pets/{id}",
-      "handler": null
+      "handler": null,
+      "auth": "Policy: Admin"
     }
   ],
   "problems": [],

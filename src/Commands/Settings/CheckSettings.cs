@@ -37,6 +37,10 @@ public sealed class CheckSettings : CommandSettings
     [Description(@"Show only routes whose path contains the given text, or matches the given wildcard pattern (* or %) (can be used multiple times).")]
     public string[]? Filter { get; set; }
 
+    [CommandOption("--anonymous")]
+    [Description(@"Show only routes anyone may request, without signing in.")]
+    public bool Anonymous { get; set; }
+
     [CommandOption("--strict")]
     [Description(@"Exit with code 2 if there are problems with the routes, e.g. ambiguous routes. For CI jobs.")]
     public bool Strict { get; set; }
@@ -57,6 +61,11 @@ public sealed class CheckSettings : CommandSettings
             .Distinct()
             .ToList();
     }
+
+    /// <summary>
+    /// Which routes to show, from --method, --filter and --anonymous.
+    /// </summary>
+    public RouteFilter GetFilter() => new(GetMethods(), Filter ?? [], Anonymous);
 
     public override ValidationResult Validate()
     {

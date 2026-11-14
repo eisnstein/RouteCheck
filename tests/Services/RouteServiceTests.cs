@@ -98,23 +98,33 @@ public class RouteServiceTests
     {
         var problems = RouteService.FindProblems(
         [
-            new("ANY", "/Home/Index/{id?}", "HomeController.Index", "home/index/{?}"),
-            new("GET", "/Home/Index/{id?}", "HomeController.IndexGet", "home/index/{?}"),
+            new("ANY", "/Home/Index/{id?}", "HomeController.Index", MatchKey: "home/index/{?}"),
+            new("GET", "/Home/Index/{id?}", "HomeController.IndexGet", MatchKey: "home/index/{?}"),
         ]);
 
         await Assert.That(problems).IsEmpty();
     }
 
     [Test]
+    public async Task Filter_KeepsAnonymousRoutes_With_AnonymousOnly()
+    {
+        List<Route> routes = [new("GET", "/pets", null, "Anonymous"), new("POST", "/pets", null, "Policy: Admin"), new("GET", "/legacy", null)];
+
+        var anonymous = RouteService.Filter(routes, new([], [], AnonymousOnly: true));
+
+        await Assert.That(anonymous.Select(r => $"{r.Method} {r.Path}")).IsEquivalentTo(["GET /pets"]);
+    }
+
+    [Test]
     public async Task Filter_Returns_AllRoutes_Without_MethodsAndPatterns()
     {
-        await Assert.That(RouteService.Filter(Routes, [], [])).IsEquivalentTo(Routes);
+        await Assert.That(RouteService.Filter(Routes, RouteFilter.None)).IsEquivalentTo(Routes);
     }
 
     [Test]
     public async Task Filter_KeepsRoutes_WithOneOfTheMethods_And_RoutesForAnyMethod()
     {
-        var routes = RouteService.Filter(Routes, ["post", "DELETE"], []);
+        var routes = RouteService.Filter(Routes, new(["post", "DELETE"], []));
 
         await Assert.That(routes.Select(r => $"{r.Method} {r.Path}")).IsEquivalentTo(["ANY /", "POST /pets", "DELETE /pets/{id}"]);
     }
@@ -122,7 +132,7 @@ public class RouteServiceTests
     [Test]
     public async Task Filter_KeepsRoutes_ContainingTheText()
     {
-        var routes = RouteService.Filter(Routes, [], ["PETS/"]);
+        var routes = RouteService.Filter(Routes, new([], ["PETS/"]));
 
         await Assert.That(routes.Select(r => $"{r.Method} {r.Path}")).IsEquivalentTo(["GET /pets/{id}", "DELETE /pets/{id}"]);
     }
@@ -132,7 +142,7 @@ public class RouteServiceTests
     [Arguments("/pets%")]
     public async Task Filter_KeepsRoutes_MatchingTheWholeWildcardPattern(string pattern)
     {
-        var routes = RouteService.Filter(Routes, [], [pattern]);
+        var routes = RouteService.Filter(Routes, new([], [pattern]));
 
         // Not /users/{id}/pets, as the pattern has to match from the start
         await Assert.That(routes.Select(r => r.Path).Distinct()).IsEquivalentTo(["/pets", "/pets/{id}"]);
@@ -141,7 +151,7 @@ public class RouteServiceTests
     [Test]
     public async Task Filter_KeepsRoutes_MatchingAnyPattern_And_AnyMethod()
     {
-        var routes = RouteService.Filter(Routes, ["GET"], ["orders", "/users/*"]);
+        var routes = RouteService.Filter(Routes, new(["GET"], ["orders", "/users/*"]));
 
         await Assert.That(routes.Select(r => $"{r.Method} {r.Path}")).IsEquivalentTo(["GET /orders", "GET /users/{id}/pets"]);
     }

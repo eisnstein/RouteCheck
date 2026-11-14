@@ -73,6 +73,23 @@ If your app targets multiple frameworks, choose the one to build and run with th
 routecheck --framework net9.0
 ```
 
+Routes can differ by environment, so you can choose it, as well as the build configuration and the launch profile:
+
+```sh
+# Development, unless set by the launch profile or ASPNETCORE_ENVIRONMENT
+routecheck -e Staging
+
+# Debug by default
+routecheck -c Release
+
+# The first profile in Properties/launchSettings.json by default
+routecheck --launch-profile https
+```
+
+The `environment` option wins over the launch profile. It is passed to the app as `--environment` too, which `WebApplication.CreateBuilder(args)` reads.
+
+In a CI job that built the app already, skip the build with `--no-build` (with the same `configuration` and `framework`).
+
 ### Filter routes
 
 The routes are sorted by path, and routes with the same path by method. To show only routes with certain HTTP methods, use the `method` option. It can be used multiple times or with comma-separated values:

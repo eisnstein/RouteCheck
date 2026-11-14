@@ -7,6 +7,12 @@ var app = builder.Build();
 
 app.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id:int?}");
 
+// For the Staging launch profile or environment
+if (app.Environment.IsStaging())
+{
+    app.MapGet("/staging", () => "staging");
+}
+
 app.Run();
 
 public class HomeController : Controller

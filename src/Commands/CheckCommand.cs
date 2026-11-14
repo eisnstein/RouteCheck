@@ -57,13 +57,18 @@ public class CheckCommand : AsyncCommand<CheckSettings>
                 Status("[dim]INFO:[/] --openapi-endpoint is no longer needed and is ignored, as the routes are read from the app itself.");
             }
 
-            Status($"Building web application [grey]{Markup.Escape(projectFile)}[/]...");
+            var runOptions = settings.GetRunOptions();
 
-            await WebAppService.BuildProject(projectFile, settings.Framework, cancellationToken);
+            if (!settings.NoBuild)
+            {
+                Status($"Building web application [grey]{Markup.Escape(projectFile)}[/]...");
+
+                await WebAppService.BuildProject(projectFile, runOptions, cancellationToken);
+            }
 
             Status("Starting web application to read its routes...");
 
-            var endpoints = await WebAppService.ReadEndpoints(projectFile, settings.Framework, TimeSpan.FromSeconds(settings.Timeout), cancellationToken);
+            var endpoints = await WebAppService.ReadEndpoints(projectFile, runOptions, TimeSpan.FromSeconds(settings.Timeout), cancellationToken);
             var routes = RouteService.Filter(RouteService.GetRoutes(endpoints), settings.GetFilter());
             var problems = RouteService.FindProblems(routes);
 

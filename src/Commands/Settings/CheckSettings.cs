@@ -24,6 +24,22 @@ public sealed class CheckSettings : CommandSettings
     [Description(@"Target framework to build and run, e.g. net9.0. Required if the web app targets multiple frameworks.")]
     public string? Framework { get; set; }
 
+    [CommandOption("-c|--configuration <Configuration>")]
+    [Description(@"Build configuration to build and run, e.g. Release. Debug if not specified.")]
+    public string? Configuration { get; set; }
+
+    [CommandOption("-e|--environment <Environment>")]
+    [Description(@"Environment to run the web app in, e.g. Staging, as routes can differ by environment. Development if not specified (and not set by a launch profile or ASPNETCORE_ENVIRONMENT).")]
+    public string? Environment { get; set; }
+
+    [CommandOption("--launch-profile <Profile>")]
+    [Description(@"Launch profile of launchSettings.json to run the web app with. The first one if not specified.")]
+    public string? LaunchProfile { get; set; }
+
+    [CommandOption("--no-build")]
+    [Description(@"Don't build the web app before running it, e.g. in a CI job that built it already.")]
+    public bool NoBuild { get; set; }
+
     [CommandOption("--timeout <Seconds>")]
     [Description(@"Seconds to wait for the web app to start and report its routes, after it has been built.")]
     [DefaultValue(20)]
@@ -78,6 +94,11 @@ public sealed class CheckSettings : CommandSettings
     /// Which routes to show, from --method, --filter, --handler, --exclude and --anonymous.
     /// </summary>
     public RouteFilter GetFilter() => new(GetMethods(), Filter ?? [], Anonymous, Handler ?? [], Exclude ?? []);
+
+    /// <summary>
+    /// How the web app is built and run.
+    /// </summary>
+    public RunOptions GetRunOptions() => new(Framework, Configuration, Environment, LaunchProfile);
 
     public override ValidationResult Validate()
     {

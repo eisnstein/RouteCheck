@@ -6,6 +6,18 @@ using RouteCheck.StartupHook;
 
 namespace RouteCheck.Services;
 
+/// <summary>
+/// How the web app is built and run.
+/// </summary>
+/// <param name="Framework">The target framework, e.g. net9.0. Required for a multi-targeted project.</param>
+/// <param name="Configuration">The build configuration, e.g. Release. Debug if not given.</param>
+/// <param name="Environment">The environment the app runs in, e.g. Staging. Development if not given.</param>
+/// <param name="LaunchProfile">The launch profile of launchSettings.json. The first one if not given.</param>
+public sealed record RunOptions(string? Framework = null, string? Configuration = null, string? Environment = null, string? LaunchProfile = null)
+{
+    public static readonly RunOptions Default = new();
+}
+
 public static class WebAppService
 {
     // Number of output lines kept to explain a failed build or run
@@ -16,11 +28,10 @@ public static class WebAppService
     /// <summary>
     /// Builds the project before running it, so the timeout does not include the build.
     /// </summary>
-    /// <param name="framework">The target framework to build, e.g. net9.0. Required to run a multi-targeted project.</param>
-    public static async Task BuildProject(string projectFile, string? framework, CancellationToken cancellationToken)
+    public static async Task BuildProject(string projectFile, RunOptions options, CancellationToken cancellationToken)
     {
         var output = new ConcurrentQueue<string>();
-        using Process process = StartProcess(["build", projectFile, "--nologo", "--verbosity", "quiet", .. FrameworkArguments(framework)], projectFile, output, new Dictionary<string, string>());
+        using Process process = StartProcess(["build", projectFile, "--nologo", "--verbosity", "quiet", .. BuildArguments(options)], projectFile, output, new Dictionary<string, string>());
 
         try
         {
@@ -46,7 +57,7 @@ public static class WebAppService
     /// </summary>
     public static async Task<IReadOnlyList<EndpointRoute>> ReadEndpoints(
         string projectFile,
-        string? framework,
+        RunOptions options,
         TimeSpan timeout,
         CancellationToken cancellationToken)
     {
@@ -62,8 +73,21 @@ public static class WebAppService
             [EndpointsContract.EndpointsFileVariable] = endpointsFile,
         };
 
+        string[] appArguments = [];
+        if (options.Environment is not null)
+        {
+            environment["ASPNETCORE_ENVIRONMENT"] = options.Environment;
+            environment["DOTNET_ENVIRONMENT"] = options.Environment;
+
+            // A launch profile would override the variables, but not the command line
+            // that WebApplication.CreateBuilder(args) and Host.CreateDefaultBuilder(args) read
+            appArguments = ["--", "--environment", options.Environment];
+        }
+
+        string[] launchProfileArguments = options.LaunchProfile is null ? [] : ["--launch-profile", options.LaunchProfile];
+
         var output = new ConcurrentQueue<string>();
-        using Process process = StartProcess(["run", "--project", projectFile, "--no-build", .. FrameworkArguments(framework)], projectFile, output, environment);
+        using Process process = StartProcess(["run", "--project", projectFile, "--no-build", .. BuildArguments(options), .. launchProfileArguments, .. appArguments], projectFile, output, environment);
 
         try
         {
@@ -98,9 +122,14 @@ public static class WebAppService
         }
     }
 
-    private static string[] FrameworkArguments(string? framework)
+    // Run has to use the output of the same build
+    private static string[] BuildArguments(RunOptions options)
     {
-        return framework is null ? [] : ["--framework", framework];
+        return
+        [
+            .. options.Framework is null ? [] : new[] { "--framework", options.Framework },
+            .. options.Configuration is null ? [] : new[] { "--configuration", options.Configuration },
+        ];
     }
 
     // Keeps startup hooks of the app's environment, e.g. of an APM agent

@@ -256,6 +256,48 @@ public class CheckCommandTests
         await Assert.That(diff.GetProperty("added").GetArrayLength()).IsGreaterThan(0);
     }
 
+    [Test]
+    [NotInParallel(SampleApi)]
+    public async Task Runs_TheWebApp_InTheGivenEnvironment_And_Configuration()
+    {
+        var routes = await RunJson(SampleApi, "--environment", "Production", "--configuration", "Release", "-f", "/dev");
+
+        // Only mapped in Development
+        await Assert.That(routes).IsEmpty();
+    }
+
+    [Test]
+    [NotInParallel(ConventionalApp)]
+    [Arguments(new[] { "--launch-profile", "Staging" }, true)]
+    // The environment wins over the launch profile's
+    [Arguments(new[] { "--launch-profile", "Staging", "-e", "Development" }, false)]
+    [Arguments(new[] { "-e", "Staging" }, true)]
+    public async Task Runs_TheWebApp_WithTheGivenLaunchProfile_Or_Environment(string[] arguments, bool isStaging)
+    {
+        var routes = await RunJson(ConventionalApp, ["--framework", "net9.0", "-f", "/staging", .. arguments]);
+
+        await Assert.That(routes.Count).IsEqualTo(isStaging ? 1 : 0);
+    }
+
+    [Test]
+    public async Task DoesNotBuild_TheWebApp_With_NoBuild()
+    {
+        // A copy that was never built
+        using var dir = TestHelper.CreateTempDirectory();
+        foreach (var file in new[] { "SampleApi.csproj", "Program.cs" })
+        {
+            File.Copy(Path.Combine(TestHelper.GetFixturePath(SampleApi), file), Path.Combine(dir.Path, file));
+        }
+
+        var app = TestHelper.CreateCommandAppTester();
+
+        var result = await app.RunAsync(["check", "--path", dir.Path, "--timeout", "60", "--no-build"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(1);
+        await Assert.That(result.Output).DoesNotContain("Building web application");
+        await Assert.That(result.Output).Contains("exited before RouteCheck could read its endpoints");
+    }
+
     // "METHOD /path Handler"
     private static string Handler(JsonElement route) => $"{route.GetProperty("method").GetString()} {route.GetProperty("path").GetString()} {route.GetProperty("handler").GetString()}";
 

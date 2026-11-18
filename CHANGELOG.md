@@ -6,6 +6,12 @@ Each version lists its changes in this order, leaving out empty sections: Breaki
 
 ## Unreleased
 
+## 0.3.1 (2026-11-18)
+
+### Enhancements
+
+- Add `net11.0` to target frameworks
+
 ## 0.3.0 (2026-11-14)
 
 ### Enhancements
